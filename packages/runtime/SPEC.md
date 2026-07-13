@@ -1,6 +1,8 @@
 # @threadline/runtime
 
-The runtime package provides the `handoff()` API that marks work the agent should not implement directly.
+`@threadline/runtime` is the app-side piece of Threadline. It gives UI code a way to mark work that should be handled later without breaking the current experience.
+
+Use it when a screen or interaction needs a safe local fallback now, but the real implementation belongs in a deeper pass.
 
 ## Contract
 
@@ -28,6 +30,20 @@ interface HandoffOptions<T = void> {
 - development mode warns when the wrapper is invoked
 - production mode stays quiet and still runs the fallback
 
+## Why this package exists
+
+The runtime makes the handoff pattern usable inside real UI code.
+
+Without it, teams tend to leave unfinished work as comments, TODOs, or ad hoc placeholder functions. With it, the unfinished piece has a real call shape, a safe fallback, and a stable identifier that the rest of Threadline can understand.
+
+## How to use it
+
+1. Import `handoff` from `@threadline/runtime`.
+2. Wrap the work that needs to be deferred.
+3. Provide an explicit `fallback` that keeps the UI usable.
+4. Add a stable `id` and a human-readable `title`.
+5. Let the CLI and AST guard find and validate the handoff later.
+
 ## Example
 
 ```ts
@@ -50,6 +66,7 @@ function SettingsToolbar() {
 - Keep the package small and dependency-light
 - Avoid positional arguments; the object form is the only supported shape
 - Preserve a stable call shape so the AST parser can identify handoffs reliably
+- The fallback should be safe to run locally because it may execute in development and production
 
 ## Files to implement
 

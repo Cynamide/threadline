@@ -1,6 +1,8 @@
 # @threadline/cli
 
-The CLI package sets up a repo, validates it, and scans source files for handoffs.
+`@threadline/cli` is the repo-facing entry point for Threadline. It helps a project get set up, keeps the rules checked locally, and turns handoffs into a structured export.
+
+If you are new to the tool, this is the package you touch first.
 
 ## Commands
 
@@ -51,6 +53,19 @@ The generated config should keep the important knobs explicit:
 2. Write the configuration files.
 3. Install the hook.
 4. Let the user validate and scan locally.
+
+## Why this package exists
+
+The CLI makes Threadline practical in a real repo.
+
+It bridges the gap between the ideas in the docs and the day-to-day workflow: set the repo up once, validate before pushing, and extract handoffs when the team needs a clean list of follow-up work.
+
+## How to use it
+
+1. Run `threadline init` in a fresh repo or one that has not been wired up yet.
+2. Run `threadline validate` during development or before a push.
+3. Run `threadline scan-handoffs` when you want the outstanding deferred work in a tracker-friendly format.
+4. Run `threadline install-hooks` if you want validation enforced automatically by git.
 
 ## Files to implement
 

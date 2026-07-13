@@ -1,6 +1,8 @@
 # @threadline/skill-templates
 
-This package holds the Markdown instructions copied into a repo's agent-facing skill file.
+`@threadline/skill-templates` holds the Markdown instructions copied into a repo's agent-facing skill file.
+
+It exists so an agent sees the same workflow, boundary language, and handoff rules every time it works in a Threadline repo.
 
 ## Purpose
 
@@ -39,8 +41,21 @@ The templates tell the agent how to:
 5. Run validation before pushing.
 6. Export tracker-ready handoff records when needed.
 
+## Why this package exists
+
+The templates are the plain-language operating manual for Threadline's agent workflow.
+
+They keep the system explainable to a new user: what counts as a handoff, what the safe fallback is for, when to stop and plan, and how to hand work off without losing the thread.
+
+## How people use it
+
+1. The CLI or repo setup copies the templates into the local skill file.
+2. The agent reads those templates before editing code.
+3. The templates steer planning, validation, and handoff writing in a consistent way across repos.
+
 ## Notes
 
 - The templates are documentation, not code
 - The exact tracker adapter can vary by repo
 - The instructions should survive repo-specific customization without falling apart
+- The wording should be direct enough that a first-time user can understand the workflow without cross-referencing every ADR
