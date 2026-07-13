@@ -1,0 +1,210 @@
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+
+import {
+  detectForbiddenImports,
+  detectStylingViolations,
+  parseHandoffs,
+  runValidation,
+  validateHandoffSyntax,
+  validateStateBoundaries,
+  validateStylingScope,
+} from '../src/index.js';
+
+test('parseHandoffs extracts multiple object-form handoffs with stable locations', () => {
+  const source = [
+    "import { handoff } from '@threadline/runtime';",
+    '',
+    'export function Toolbar() {',
+    '  const exportAction = handoff({',
+    "    id: 'export-data',",
+    "    title: 'Export Data',",
+    "    description: 'Export needs a backend job.',",
+    "    fallback: () => alert('Export queued'),",
+    '  });',
+    '',
+    '  return handoff({',
+    "    id: 'save-draft',",
+    "    title: 'Save Draft',",
+    "    fallback: function fallback() { return null; },",
+    '  });',
+    '}',
+  ].join('\n');
+
+  const handoffs = parseHandoffs(source, 'src/components/Toolbar.tsx');
+
+  assert.equal(handoffs.length, 2);
+  assert.deepEqual(
+    handoffs.map((handoff) => ({
+      id: handoff.id,
+      title: handoff.title,
+      description: handoff.description,
+      line: handoff.line,
+      column: handoff.column,
+    })),
+    [
+      {
+        id: 'export-data',
+        title: 'Export Data',
+        description: 'Export needs a backend job.',
+        line: 4,
+        column: 24,
+      },
+      {
+        id: 'save-draft',
+        title: 'Save Draft',
+        description: undefined,
+        line: 11,
+        column: 10,
+      },
+    ],
+  );
+  assert.equal(handoffs[0].fallback.callable, true);
+  assert.equal(handoffs[1].fallback.callable, true);
+});
+
+test('validateHandoffSyntax reports documented handoff codes and description warning', () => {
+  const [handoff] = parseHandoffs(
+    [
+      'handoff({',
+      "  id: 'ExportData',",
+      "  description: '',",
+      '});',
+    ].join('\n'),
+    'src/components/ExportButton.tsx',
+  );
+
+  const violations = validateHandoffSyntax(handoff);
+
+  assert.deepEqual(
+    violations.map(({ code, severity, line, column }) => ({ code, severity, line, column })),
+    [
+      { code: 'HANDOFF002', severity: 'error', line: 2, column: 7 },
+      { code: 'HANDOFF003', severity: 'error', line: 1, column: 1 },
+      { code: 'HANDOFF004', severity: 'warning', line: 3, column: 16 },
+      { code: 'HANDOFF005', severity: 'error', line: 1, column: 1 },
+    ],
+  );
+});
+
+test('validateStateBoundaries detects UI state violations including unsafe fallback bodies', () => {
+  const source = [
+    'export function ProfileCard() {',
+    '  const user = useSelector((state) => state.user);',
+    '  const open = () => useNavigate()("/settings");',
+    '  return handoff({',
+    "    id: 'load-profile',",
+    "    title: 'Load Profile',",
+    "    description: 'Needs API integration.',",
+    '    fallback: () => fetch("/api/profile"),',
+    '  });',
+    '}',
+  ].join('\n');
+
+  const violations = validateStateBoundaries(source, 'src/components/ProfileCard.tsx', {
+    project: { src_path: 'src', component_path: 'components' },
+    boundaries: { whitelisted_components: [] },
+  });
+
+  assert.deepEqual(
+    violations.map(({ code, line, column }) => ({ code, line, column })),
+    [
+      { code: 'STATE005', line: 2, column: 16 },
+      { code: 'STATE007', line: 3, column: 22 },
+      { code: 'STATE001', line: 8, column: 21 },
+    ],
+  );
+});
+
+test('detectForbiddenImports reports configured import names unless whitelisted', () => {
+  const source = [
+    "import axios from 'axios';",
+    "import { useQuery, useMutation } from '@tanstack/react-query';",
+    "import { Button } from '@/components/ui/button';",
+  ].join('\n');
+
+  const violations = detectForbiddenImports(source, 'src/components/SearchBox.tsx', ['useMutation']);
+
+  assert.deepEqual(
+    violations.map(({ code, message, line, column }) => ({ code, message, line, column })),
+    [
+      {
+        code: 'STATE002',
+        message: 'Move axios usage out of the UI component or add an explicit whitelist entry.',
+        line: 1,
+        column: 8,
+      },
+      {
+        code: 'STATE004',
+        message: 'Move useQuery usage out of the UI component or add an explicit whitelist entry.',
+        line: 2,
+        column: 10,
+      },
+    ],
+  );
+});
+
+test('styling validators enforce Tailwind and CSS modules strategies', () => {
+  assert.equal(detectStylingViolations('src/components/button.css', 'tailwind')[0].code, 'STYLE001');
+  assert.equal(detectStylingViolations('src/components/button.css', 'css-modules')[0].code, 'STYLE003');
+
+  const tailwindViolations = validateStylingScope(
+    '<button className="px-4 my-custom-button">Save</button>',
+    'src/components/Button.tsx',
+    'tailwind',
+  );
+  const cssModuleViolations = validateStylingScope(
+    '<button className="primary">Save</button>',
+    'src/components/Button.tsx',
+    'css-modules',
+  );
+
+  assert.deepEqual(tailwindViolations.map(({ code }) => code), ['STYLE002']);
+  assert.deepEqual(cssModuleViolations.map(({ code }) => code), ['STYLE002']);
+});
+
+test('runValidation returns stable summary and forbidden path violations', () => {
+  const source = [
+    'export function ExportButton() {',
+    '  return handoff({',
+    "    id: 'export-data',",
+    "    title: 'Export Data',",
+    '    fallback: () => null,',
+    '  });',
+    '}',
+  ].join('\n');
+
+  const result = runValidation({
+    files: [
+      { filePath: 'src/components/ExportButton.tsx', source },
+      { filePath: 'src/api/client.ts', source: 'export const client = {};' },
+      { filePath: 'src/components/global.css', source: '.button {}' },
+    ],
+    config: {
+      project: { src_path: 'src', component_path: 'components', extensions: ['.tsx', '.ts', '.css'] },
+      styling: { strategy: 'tailwind', enforce_scoping: true },
+      boundaries: {
+        forbidden_paths: ['src/api/', 'src/store/'],
+        forbidden_imports: [],
+        whitelisted_imports: [],
+        whitelisted_components: [],
+      },
+    },
+  });
+
+  assert.equal(result.passed, false);
+  assert.deepEqual(result.summary, {
+    filesValidated: 3,
+    handoffsFound: 1,
+    errorCount: 2,
+    warningCount: 1,
+  });
+  assert.deepEqual(
+    result.violations.map(({ code, filePath }) => ({ code, filePath })),
+    [
+      { code: 'HANDOFF004', filePath: 'src/components/ExportButton.tsx' },
+      { code: 'PATH001', filePath: 'src/api/client.ts' },
+      { code: 'STYLE001', filePath: 'src/components/global.css' },
+    ],
+  );
+});

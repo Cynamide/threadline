@@ -23,7 +23,7 @@
     "CONTEXT.md"
   ],
   "scripts": {
-    "build": "node scripts/build.mjs",
+    "build": "node --disable-warning=ExperimentalWarning scripts/build.mjs",
     "test": "npm run build && node --test test/*.test.mjs",
     "clean": "rm -rf dist"
   },

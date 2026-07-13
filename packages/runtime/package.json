@@ -1,0 +1,42 @@
+{
+  "name": "@threadline/runtime",
+  "version": "0.1.0",
+  "description": "Threadline runtime for object-form handoffs with safe fallbacks.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "SPEC.md",
+    "CONTEXT.md"
+  ],
+  "scripts": {
+    "build": "node --disable-warning=ExperimentalWarning ./scripts/build.mjs",
+    "test": "node --test test/**/*.test.ts",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "threadline",
+    "runtime",
+    "handoff"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Cynamide/threadline",
+    "directory": "packages/runtime"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

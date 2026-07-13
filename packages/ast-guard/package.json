@@ -1,0 +1,24 @@
+{
+  "name": "@threadline/ast-guard",
+  "version": "0.1.0",
+  "description": "Local AST-lite validation for Threadline handoffs and UI boundaries.",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "node --test",
+    "build": "node --check src/index.js",
+    "lint": "node --check src/index.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "src",
+    "SPEC.md",
+    "CONTEXT.md"
+  ],
+  "license": "MIT"
+}

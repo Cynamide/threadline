@@ -1,0 +1,22 @@
+{
+  "name": "@threadline/skill-templates",
+  "version": "1.0.0",
+  "private": false,
+  "type": "module",
+  "description": "Reusable agent instruction templates for Threadline repos.",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./templates/*": "./templates/*"
+  },
+  "files": [
+    "src",
+    "templates"
+  ],
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
