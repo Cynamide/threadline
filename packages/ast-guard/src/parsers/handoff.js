@@ -204,8 +204,7 @@ function isCallableExpression(tokens) {
   if (tokens.length === 0) return false;
   const first = tokens[0];
   const second = tokens[1];
-  const hasArrow = tokens.some((token) => token.value === '=>');
-  if ((first.type === 'identifier' && first.value === 'function') || (first.type === 'identifier' && first.value === 'async' && second?.value === 'function') || hasArrow) {
+  if ((first.type === 'identifier' && first.value === 'function') || (first.type === 'identifier' && first.value === 'async' && second?.value === 'function') || isArrowFunctionExpression(tokens)) {
     return true;
   }
 
@@ -222,4 +221,33 @@ function isCallableExpression(tokens) {
     return false;
   }
   return true;
+}
+
+function isArrowFunctionExpression(tokens) {
+  let depth = 0;
+
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index];
+    if (token.type === 'string' || token.type === 'template') continue;
+
+    if (OPENERS.has(token.value)) {
+      depth += 1;
+      continue;
+    }
+
+    if (CLOSERS.has(token.value)) {
+      depth -= 1;
+      continue;
+    }
+
+    if (depth === 0 && (token.value === '?' || token.value === ':')) {
+      return false;
+    }
+
+    if (depth === 0 && token.value === '=>') {
+      return true;
+    }
+  }
+
+  return false;
 }
