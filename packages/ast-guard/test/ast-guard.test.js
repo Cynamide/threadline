@@ -96,7 +96,7 @@ test('validateHandoffSyntax reports documented handoff codes and description err
     [
       { code: 'HANDOFF002', severity: 'error', line: 2, column: 7 },
       { code: 'HANDOFF003', severity: 'error', line: 1, column: 1 },
-      { code: 'HANDOFF004', severity: 'error', line: 3, column: 16 },
+      { code: 'HANDOFF004', severity: 'warning', line: 3, column: 16 },
       { code: 'HANDOFF005', severity: 'error', line: 1, column: 1 },
     ],
   );
@@ -154,6 +154,40 @@ test('detectForbiddenImports reports configured import names unless whitelisted'
         line: 2,
         column: 10,
       },
+    ],
+  );
+});
+
+test('runValidation honors configured forbidden imports and wildcard paths', () => {
+  const result = runValidation({
+    files: [
+      {
+        filePath: 'src/components/Example.tsx',
+        source: [
+          "import axios from 'axios';",
+          "import { useQuery } from '@tanstack/react-query';",
+          'export const Example = () => null;',
+        ].join('\n'),
+      },
+      { filePath: 'src/hooks/useAuth.ts', source: 'export const useAuth = () => null;' },
+    ],
+    config: {
+      project: { src_path: 'src', component_path: 'components', extensions: ['.tsx', '.ts'] },
+      styling: { strategy: 'tailwind', enforce_scoping: false },
+      boundaries: {
+        forbidden_imports: ['useQuery'],
+        forbidden_paths: ['src/hooks/useAuth*'],
+        whitelisted_imports: [],
+        whitelisted_components: [],
+      },
+    },
+  });
+
+  assert.deepEqual(
+    result.violations.map(({ code, filePath }) => ({ code, filePath })),
+    [
+      { code: 'STATE004', filePath: 'src/components/Example.tsx' },
+      { code: 'PATH001', filePath: 'src/hooks/useAuth.ts' },
     ],
   );
 });
@@ -216,8 +250,8 @@ test('runValidation returns stable summary and forbidden path violations', () =>
   assert.deepEqual(result.summary, {
     filesValidated: 3,
     handoffsFound: 1,
-    errorCount: 3,
-    warningCount: 0,
+    errorCount: 2,
+    warningCount: 1,
   });
   assert.deepEqual(
     result.violations.map(({ code, filePath }) => ({ code, filePath })),

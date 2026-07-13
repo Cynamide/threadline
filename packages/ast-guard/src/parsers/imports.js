@@ -14,8 +14,18 @@ const FORBIDDEN_IMPORT_CODES = new Map([
 ]);
 
 export function detectForbiddenImports(source, filePath, whitelistedImports = []) {
+  return detectForbiddenImportsWithConfig(source, filePath, whitelistedImports);
+}
+
+export function detectForbiddenImportsWithConfig(
+  source,
+  filePath,
+  whitelistedImports = [],
+  forbiddenImports = [],
+) {
   const tokens = tokenize(source);
   const whitelist = new Set(whitelistedImports);
+  const configuredForbidden = forbiddenImports.length > 0 ? new Set(forbiddenImports) : null;
   const violations = [];
 
   for (let index = 0; index < tokens.length; index += 1) {
@@ -32,6 +42,7 @@ export function detectForbiddenImports(source, filePath, whitelistedImports = []
 
     for (const { name, localName, token } of specifiers) {
       if (whitelist.has(name) || whitelist.has(localName)) continue;
+      if (configuredForbidden && !configuredForbidden.has(name) && !configuredForbidden.has(localName)) continue;
       const code = FORBIDDEN_IMPORT_CODES.get(name) ?? FORBIDDEN_IMPORT_CODES.get(localName);
       if (!code) continue;
       const location = getLineColumn(source, token.start);

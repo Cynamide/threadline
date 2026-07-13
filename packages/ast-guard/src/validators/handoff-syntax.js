@@ -45,6 +45,7 @@ export function validateHandoffSyntax(handoff) {
     violations.push(
       makeViolation({
         code: 'HANDOFF004',
+        severity: 'warning',
         filePath: handoff.filePath,
         line: location.line,
         column: location.column,

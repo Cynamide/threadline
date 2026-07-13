@@ -5,7 +5,7 @@ import { detectStylingViolations } from './parsers/styling.js';
 import { validateHandoffSyntax } from './validators/handoff-syntax.js';
 import { validateStateBoundaries } from './validators/state-boundary.js';
 import { validateStylingScope } from './validators/styling-scope.js';
-import { detectForbiddenImports } from './parsers/imports.js';
+import { detectForbiddenImportsWithConfig } from './parsers/imports.js';
 import { makeViolation } from './location.js';
 
 const DEFAULT_CONFIG = {
@@ -44,7 +44,12 @@ export function runValidation(options = {}) {
         violations.push(...validateHandoffSyntax(handoff));
       }
       violations.push(
-        ...detectForbiddenImports(source, file.filePath, config.boundaries.whitelisted_imports),
+        ...detectForbiddenImportsWithConfig(
+          source,
+          file.filePath,
+          config.boundaries.whitelisted_imports,
+          config.boundaries.forbidden_imports,
+        ),
         ...validateStateBoundaries(source, file.filePath, config),
       );
       if (config.styling.enforce_scoping) {
@@ -89,7 +94,7 @@ function validateForbiddenPath(filePath, config) {
   const violations = [];
 
   for (const forbiddenPath of forbiddenPaths) {
-    if (!filePath.startsWith(forbiddenPath)) continue;
+    if (!matchesForbiddenPath(filePath, forbiddenPath)) continue;
     violations.push(
       makeViolation({
         code: pathCode(forbiddenPath),
@@ -103,9 +108,25 @@ function validateForbiddenPath(filePath, config) {
 }
 
 function pathCode(forbiddenPath) {
-  if (forbiddenPath.startsWith('src/api/')) return 'PATH001';
-  if (forbiddenPath.startsWith('src/store/')) return 'PATH002';
+  if (forbiddenPath.includes('store')) return 'PATH002';
   return 'PATH001';
+}
+
+function matchesForbiddenPath(filePath, forbiddenPath) {
+  if (forbiddenPath.endsWith('/')) return filePath.startsWith(forbiddenPath);
+  if (forbiddenPath.includes('*')) {
+    return globToRegExp(forbiddenPath).test(filePath);
+  }
+  return filePath === forbiddenPath || filePath.startsWith(`${forbiddenPath}/`);
+}
+
+function globToRegExp(pattern) {
+  const escaped = pattern
+    .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+    .replace(/\*\*/g, '::DOUBLE_STAR::')
+    .replace(/\*/g, '[^/]*')
+    .replace(/::DOUBLE_STAR::/g, '.*');
+  return new RegExp(`^${escaped}$`);
 }
 
 function mergeConfig(defaultConfig, config) {
