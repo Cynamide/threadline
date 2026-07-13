@@ -6,6 +6,9 @@
   "bin": {
     "threadline": "./dist/index.js"
   },
+  "dependencies": {
+    "@threadline/ast-guard": "workspace:*"
+  },
   "exports": {
     ".": "./dist/index.js",
     "./commands/init": "./dist/commands/init.js",

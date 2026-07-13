@@ -1,4 +1,4 @@
-import { chmod, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, readFile, readdir, rm, symlink, unlink, writeFile } from 'node:fs/promises';
 import { dirname, extname, join, relative } from 'node:path';
 import { stripTypeScriptTypes } from 'node:module';
 import { composeTemplateBundle } from '../../skill-templates/src/index.js';
@@ -9,6 +9,8 @@ const distRoot = new URL('dist/', root);
 
 await rm(distRoot, { recursive: true, force: true });
 
+await ensureLinkedPackage(new URL('node_modules/@threadline/ast-guard', root), new URL('../ast-guard/', root));
+
 for (const file of await listFiles(srcRoot)) {
   if (file.endsWith('.d.ts') || extname(file) !== '.ts') continue;
   const source = await readFile(file, 'utf8');
@@ -17,8 +19,6 @@ for (const file of await listFiles(srcRoot)) {
   await mkdir(dirname(output), { recursive: true });
   await writeFile(output, stripped);
 }
-
-await copySourceTree(new URL('../ast-guard/src/', root), new URL('dist/vendor/ast-guard/src/', root));
 
 await mkdir(join(distRoot.pathname, 'generated'), { recursive: true });
 await writeFile(
@@ -41,17 +41,12 @@ async function listFiles(dir) {
   return files;
 }
 
-async function copySourceTree(sourceRoot, targetRoot) {
-  await mkdir(targetRoot, { recursive: true });
-  for (const entry of await readdir(sourceRoot, { withFileTypes: true })) {
-    const sourcePath = join(sourceRoot.pathname ?? sourceRoot, entry.name);
-    const targetPath = join(targetRoot.pathname ?? targetRoot, entry.name);
-    if (entry.isDirectory()) {
-      await copySourceTree(new URL(`${entry.name}/`, sourceRoot), new URL(`${entry.name}/`, targetRoot));
-      continue;
-    }
-    if (!entry.isFile()) continue;
-    await mkdir(dirname(targetPath), { recursive: true });
-    await writeFile(targetPath, await readFile(sourcePath, 'utf8'));
+async function ensureLinkedPackage(linkPath, targetPath) {
+  await mkdir(new URL('.', linkPath), { recursive: true });
+  try {
+    await unlink(linkPath);
+  } catch {
+    // ignore missing links
   }
+  await symlink(targetPath, linkPath, 'dir');
 }
