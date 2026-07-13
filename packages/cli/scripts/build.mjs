@@ -18,6 +18,8 @@ for (const file of await listFiles(srcRoot)) {
   await writeFile(output, stripped);
 }
 
+await copySourceTree(new URL('../ast-guard/src/', root), new URL('dist/vendor/ast-guard/src/', root));
+
 await mkdir(join(distRoot.pathname, 'generated'), { recursive: true });
 await writeFile(
   join(distRoot.pathname, 'generated', 'skill-template-bundle.js'),
@@ -37,4 +39,19 @@ async function listFiles(dir) {
     }
   }
   return files;
+}
+
+async function copySourceTree(sourceRoot, targetRoot) {
+  await mkdir(targetRoot, { recursive: true });
+  for (const entry of await readdir(sourceRoot, { withFileTypes: true })) {
+    const sourcePath = join(sourceRoot.pathname ?? sourceRoot, entry.name);
+    const targetPath = join(targetRoot.pathname ?? targetRoot, entry.name);
+    if (entry.isDirectory()) {
+      await copySourceTree(new URL(`${entry.name}/`, sourceRoot), new URL(`${entry.name}/`, targetRoot));
+      continue;
+    }
+    if (!entry.isFile()) continue;
+    await mkdir(dirname(targetPath), { recursive: true });
+    await writeFile(targetPath, await readFile(sourcePath, 'utf8'));
+  }
 }

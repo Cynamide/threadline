@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { parseHandoffs, validateHandoffSyntax } from '../../../ast-guard/src/index.js';
+import { parseHandoffs, validateHandoffSyntax } from '../vendor/ast-guard/src/index.js';
 import { loadConfig } from '../utils/config.js';
 import { findFiles } from '../utils/fs.js';
 

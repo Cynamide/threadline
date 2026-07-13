@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { runValidation as runAstValidation } from '../../../ast-guard/src/index.js';
+import { runValidation as runAstValidation } from '../vendor/ast-guard/src/index.js';
 import { loadConfig } from '../utils/config.js';
 import { exists, findFiles } from '../utils/fs.js';
 import { stagedFiles } from '../utils/git.js';
