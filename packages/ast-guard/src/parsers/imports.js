@@ -30,7 +30,31 @@ export function detectForbiddenImportsWithConfig(
 
   for (let index = 0; index < tokens.length; index += 1) {
     if (!isIdentifierToken(tokens[index], 'import')) continue;
-    if (tokens[index + 1]?.value === '(') continue;
+
+    if (tokens[index + 1]?.value === '(') {
+      const closeIndex = matchingTokenIndex(tokens, index + 1, '(', ')');
+      if (closeIndex === -1) continue;
+      const moduleToken = findFirstStringLikeToken(tokens, index + 2, closeIndex - 1);
+      if (!moduleToken || !isStringToken(moduleToken)) continue;
+      const moduleName = normalizeModuleName(moduleToken.value);
+      const code = FORBIDDEN_IMPORT_CODES.get(moduleName);
+      if (!code) continue;
+      if (whitelist.has(moduleName)) continue;
+      if (configuredForbidden && !configuredForbidden.has(moduleName)) continue;
+      const location = getLineColumn(source, moduleToken.start);
+      violations.push(
+        makeViolation({
+          code,
+          filePath,
+          line: location.line,
+          column: location.column,
+          message: `Move ${moduleName} usage out of the UI component or add an explicit whitelist entry.`,
+        }),
+      );
+      continue;
+    }
+
+    if (isIdentifierToken(tokens[index + 1], 'type')) continue;
 
     const fromIndex = findFromIndex(tokens, index + 1);
     if (fromIndex === -1) continue;
@@ -70,8 +94,8 @@ function findFromIndex(tokens, startIndex) {
   return -1;
 }
 
-function findFirstStringLikeToken(tokens, startIndex) {
-  for (let index = startIndex; index < tokens.length; index += 1) {
+function findFirstStringLikeToken(tokens, startIndex, endIndex = tokens.length - 1) {
+  for (let index = startIndex; index <= endIndex; index += 1) {
     if (isStringToken(tokens[index])) return tokens[index];
     if (tokens[index].value === ';') break;
   }

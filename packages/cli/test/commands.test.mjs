@@ -311,7 +311,7 @@ export function ExportButton() {
   assert.equal(scanResult.records.length, 1);
 });
 
-test('scan-handoffs returns tracker-ready records with source locations', async () => {
+test('scan-handoffs returns canonical records with source locations', async () => {
   const cwd = await fixture({
     'src/components/Settings.tsx': `import { handoff } from '@threadline/runtime';
 

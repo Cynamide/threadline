@@ -3,6 +3,7 @@ import { test } from 'node:test';
 
 import {
   detectForbiddenImports,
+  detectForbiddenImportsWithConfig,
   detectStylingViolations,
   parseHandoffs,
   runValidation,
@@ -177,6 +178,28 @@ test('detectForbiddenImports reports configured import names unless whitelisted'
         message: 'Move useQuery usage out of the UI component or add an explicit whitelist entry.',
         line: 2,
         column: 10,
+      },
+    ],
+  );
+});
+
+test('detectForbiddenImportsWithConfig reports forbidden dynamic imports', () => {
+  const source = [
+    'export async function loadWidget() {',
+    "  return await import('axios');",
+    '}',
+  ].join('\n');
+
+  const violations = detectForbiddenImportsWithConfig(source, 'src/components/Loader.tsx', [], ['axios']);
+
+  assert.deepEqual(
+    violations.map(({ code, message, line, column }) => ({ code, message, line, column })),
+    [
+      {
+        code: 'STATE002',
+        message: 'Move axios usage out of the UI component or add an explicit whitelist entry.',
+        line: 2,
+        column: 23,
       },
     ],
   );
