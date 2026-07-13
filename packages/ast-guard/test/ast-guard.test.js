@@ -96,7 +96,7 @@ test('validateHandoffSyntax reports documented handoff codes and description err
     [
       { code: 'HANDOFF002', severity: 'error', line: 2, column: 7 },
       { code: 'HANDOFF003', severity: 'error', line: 1, column: 1 },
-      { code: 'HANDOFF004', severity: 'warning', line: 3, column: 16 },
+      { code: 'HANDOFF004', severity: 'error', line: 3, column: 16 },
       { code: 'HANDOFF005', severity: 'error', line: 1, column: 1 },
     ],
   );
@@ -250,8 +250,8 @@ test('runValidation returns stable summary and forbidden path violations', () =>
   assert.deepEqual(result.summary, {
     filesValidated: 3,
     handoffsFound: 1,
-    errorCount: 2,
-    warningCount: 1,
+    errorCount: 3,
+    warningCount: 0,
   });
   assert.deepEqual(
     result.violations.map(({ code, filePath }) => ({ code, filePath })),

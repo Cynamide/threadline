@@ -136,7 +136,7 @@ function readNumber(text: string, section: string, key: string, fallback: number
 }
 
 function readEnum<T extends string>(text: string, section: string, key: string, allowed: readonly T[], fallback: T, required = false): T {
-  const value = readScalar(text, section, key, fallback);
+  const value = readScalar(text, section, key, fallback, required);
   if (!allowed.includes(value as T)) {
     throw new Error(`Invalid config: ${section}.${key} must be one of ${allowed.join(', ')}.`);
   }

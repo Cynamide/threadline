@@ -9,7 +9,7 @@ The AST guard parses source files and reports violations before code is pushed.
 - `id` is present and stable
 - `id` is a string literal and should be kebab-case
 - `title` is present
-- `description` is recommended
+- `description` is recommended, but missing or empty descriptions are reported as `HANDOFF004`
 - `fallback` is present and callable
 
 ### State boundaries
@@ -70,14 +70,14 @@ Validation should return structured violations with:
 
 ## Files to implement
 
-- `src/parsers/handoff.ts`
-- `src/parsers/styling.ts`
-- `src/parsers/imports.ts`
-- `src/validators/handoff-syntax.ts`
-- `src/validators/state-boundary.ts`
-- `src/validators/styling-scope.ts`
-- `src/runner.ts`
-- `src/index.ts`
+- `src/parsers/handoff.js`
+- `src/parsers/styling.js`
+- `src/parsers/imports.js`
+- `src/validators/handoff-syntax.js`
+- `src/validators/state-boundary.js`
+- `src/validators/styling-scope.js`
+- `src/runner.js`
+- `src/index.js`
 
 ## Tests
 

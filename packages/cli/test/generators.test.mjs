@@ -31,5 +31,6 @@ test('generates schema-aligned config yaml with explicit knobs', () => {
 test('generates markdown files for boundaries, design system, and agent skill', () => {
   assert.match(generateBoundariesMarkdown(), /Forbidden imports/);
   assert.match(generateDesignSystemMarkdown({ library: 'mui', importPath: '@mui/material' }), /mui/);
-  assert.match(generateSkillMarkdown(), /threadline validate/);
+  assert.match(generateSkillMarkdown(), /# Base Skill/);
+  assert.match(generateSkillMarkdown(), /# Validation Workflow/);
 });

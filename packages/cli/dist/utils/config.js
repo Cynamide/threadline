@@ -136,7 +136,7 @@ function readNumber(text        , section        , key        , fallback        
 }
 
 function readEnum                  (text        , section        , key        , allowed              , fallback   , required = false)    {
-  const value = readScalar(text, section, key, fallback);
+  const value = readScalar(text, section, key, fallback, required);
   if (!allowed.includes(value     )) {
     throw new Error(`Invalid config: ${section}.${key} must be one of ${allowed.join(', ')}.`);
   }
