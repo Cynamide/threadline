@@ -21,6 +21,31 @@ const defaultConfig: ThreadlineConfig = {
     whitelisted_imports: [],
     whitelisted_components: [],
   },
+  git: {
+    branch_prefix: 'design/',
+    commit_style: 'conventional',
+    squash_merge: true,
+    pr_title_format: 'ui: {description}',
+  },
+  handoff: {
+    create_issues: true,
+    status_on_create: 'Backlog',
+    status_on_merge: 'Ready',
+    default_assignee: null,
+    team_id: null,
+  },
+  validation: {
+    pre_push: true,
+    pre_commit: false,
+    auto_fix: true,
+    max_warnings: 0,
+  },
+  design_system: {
+    library: 'none',
+    import_path: '',
+    allow_new_primitives: false,
+    component_aliases: {},
+  },
 };
 
 export async function loadConfig(cwd: string): Promise<ThreadlineConfig> {

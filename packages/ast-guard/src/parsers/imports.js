@@ -12,6 +12,7 @@ const FORBIDDEN_IMPORT_CODES = new Map([
   ['sessionStorage', 'STATE006'],
   ['useNavigate', 'STATE007'],
 ]);
+const FALLBACK_FORBIDDEN_IMPORT_CODE = 'STATE002';
 
 export function detectForbiddenImports(source, filePath, whitelistedImports = []) {
   return detectForbiddenImportsWithConfig(source, filePath, whitelistedImports);
@@ -37,10 +38,13 @@ export function detectForbiddenImportsWithConfig(
       const moduleToken = findFirstStringLikeToken(tokens, index + 2, closeIndex - 1);
       if (!moduleToken || !isStringToken(moduleToken)) continue;
       const moduleName = normalizeModuleName(moduleToken.value);
-      const code = FORBIDDEN_IMPORT_CODES.get(moduleName);
-      if (!code) continue;
       if (whitelist.has(moduleName)) continue;
-      if (configuredForbidden && !configuredForbidden.has(moduleName)) continue;
+      const code = configuredForbidden
+        ? configuredForbidden.has(moduleName)
+          ? FORBIDDEN_IMPORT_CODES.get(moduleName) ?? FALLBACK_FORBIDDEN_IMPORT_CODE
+          : null
+        : FORBIDDEN_IMPORT_CODES.get(moduleName);
+      if (!code) continue;
       const location = getLineColumn(source, moduleToken.start);
       violations.push(
         makeViolation({
@@ -62,17 +66,37 @@ export function detectForbiddenImportsWithConfig(
     const moduleToken = findFirstStringLikeToken(tokens, fromIndex + 1);
     if (!moduleToken || !isStringToken(moduleToken)) continue;
     const moduleName = normalizeModuleName(moduleToken.value);
+    if (whitelist.has(moduleName)) continue;
+    if (configuredForbidden?.has(moduleName)) {
+      const location = getLineColumn(source, moduleToken.start);
+      violations.push(
+        makeViolation({
+          code: FORBIDDEN_IMPORT_CODES.get(moduleName) ?? FALLBACK_FORBIDDEN_IMPORT_CODE,
+          filePath,
+          line: location.line,
+          column: location.column,
+          message: `Move ${moduleName} usage out of the UI component or add an explicit whitelist entry.`,
+        }),
+      );
+      continue;
+    }
+
     const specifiers = extractImportSpecifiers(tokens, index + 1, fromIndex - 1, moduleName);
 
     for (const { name, localName, token } of specifiers) {
       if (whitelist.has(name) || whitelist.has(localName)) continue;
-      if (configuredForbidden && !configuredForbidden.has(name) && !configuredForbidden.has(localName)) continue;
+      if (configuredForbidden) {
+        if (!configuredForbidden.has(name) && !configuredForbidden.has(localName)) continue;
+      }
       const code = FORBIDDEN_IMPORT_CODES.get(name) ?? FORBIDDEN_IMPORT_CODES.get(localName);
-      if (!code) continue;
+      if (!code) {
+        if (!configuredForbidden) continue;
+      }
+      const resolvedCode = code ?? FALLBACK_FORBIDDEN_IMPORT_CODE;
       const location = getLineColumn(source, token.start);
       violations.push(
         makeViolation({
-          code,
+          code: resolvedCode,
           filePath,
           line: location.line,
           column: location.column,

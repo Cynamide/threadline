@@ -117,13 +117,25 @@ test('validateHandoffSyntax rejects non-callable fallback expressions', () => {
       "  title: 'Paren Fallback',",
       '  fallback: (0),',
       '});',
+      '',
+      'handoff({',
+      "  id: 'binary-fallback',",
+      "  title: 'Binary Fallback',",
+      '  fallback: count + 1,',
+      '});',
+      '',
+      'handoff({',
+      "  id: 'ternary-fallback',",
+      "  title: 'Ternary Fallback',",
+      '  fallback: maybe ? a : b,',
+      '});',
     ].join('\n'),
     'src/components/Example.tsx',
   );
 
   assert.deepEqual(
     handoffs.map((handoff) => validateHandoffSyntax(handoff).some((violation) => violation.code === 'HANDOFF005')),
-    [true, true],
+    [true, true, true, true],
   );
 });
 
@@ -203,6 +215,15 @@ test('detectForbiddenImportsWithConfig reports forbidden dynamic imports', () =>
       },
     ],
   );
+});
+
+test('detectForbiddenImportsWithConfig reports configured forbidden module paths', () => {
+  const source = "import api from '@/services/api';";
+  const violations = detectForbiddenImportsWithConfig(source, 'src/components/Loader.tsx', [], ['@/services/api']);
+
+  assert.equal(violations.length, 1);
+  assert.equal(violations[0].code, 'STATE002');
+  assert.equal(violations[0].filePath, 'src/components/Loader.tsx');
 });
 
 test('runValidation honors configured forbidden imports and wildcard paths', () => {

@@ -214,5 +214,12 @@ function isCallableExpression(tokens) {
     return closeIndex === tokens.length - 1 && isCallableExpression(tokens.slice(1, -1));
   }
 
-  return first.type === 'identifier' && !INVALID_CALLABLE_IDENTIFIERS.has(first.value);
+  if (first.type !== 'identifier' || INVALID_CALLABLE_IDENTIFIERS.has(first.value)) return false;
+  for (let index = 1; index < tokens.length; index += 1) {
+    const token = tokens[index];
+    if (token.type === 'identifier') continue;
+    if (token.value === '.' || token.value === '[' || token.value === ']') continue;
+    return false;
+  }
+  return true;
 }
