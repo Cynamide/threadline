@@ -45,19 +45,9 @@ export async function loadConfig(cwd        )                            {
       enforce_scoping: readScalar(text, 'styling', 'enforce_scoping', 'true') === 'true',
     },
     handoff: {
-      create_issues: readScalar(text, 'handoff', 'create_issues', readScalar(text, 'handoff', 'create_linear_issues', 'true')) === 'true',
-      status_on_create: readScalar(
-        text,
-        'handoff',
-        'status_on_create',
-        readScalar(text, 'handoff', 'linear_status_on_create', 'Backlog'),
-      ),
-      status_on_merge: readScalar(
-        text,
-        'handoff',
-        'status_on_merge',
-        readScalar(text, 'handoff', 'linear_status_on_merge', 'Ready'),
-      ),
+      create_issues: readScalar(text, 'handoff', 'create_issues', 'true') === 'true',
+      status_on_create: readScalar(text, 'handoff', 'status_on_create', 'Backlog'),
+      status_on_merge: readScalar(text, 'handoff', 'status_on_merge', 'Ready'),
       default_assignee: readScalar(text, 'handoff', 'default_assignee', ''),
       team_id: readScalar(text, 'handoff', 'team_id', ''),
     },

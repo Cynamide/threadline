@@ -55,9 +55,6 @@ export interface ThreadlineConfig {
     status_on_merge?: string;
     default_assignee?: string | null;
     team_id?: string | null;
-    create_linear_issues?: boolean;
-    linear_status_on_create?: string;
-    linear_status_on_merge?: string;
   };
   boundaries: {
     forbidden_imports: string[];

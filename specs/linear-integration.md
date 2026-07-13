@@ -34,7 +34,7 @@ The tracker adapter should be able to turn a handoff into an issue-like payload:
 }
 ```
 
-## Linear as an adapter example
+## Tracker adapters
 
 Linear is the canonical external example because it has a clear issue model and a predictable status flow.
 

@@ -63,7 +63,9 @@ styling:
 git:
   branch_prefix: design/
 handoff:
-  create_linear_issues: true
+  create_issues: true
+  status_on_create: Backlog
+  status_on_merge: Ready
 boundaries:
   forbidden_imports:
     - axios
@@ -136,6 +138,7 @@ export function Settings() {
     id: 'export-data',
     title: 'Export Data',
     description: 'Trigger CSV export of the current table view',
+    fallback: () => null,
     priority: 'high'
   });
 }
@@ -155,14 +158,31 @@ export function Settings() {
     valid: true,
     errors: [],
     trackerPayload: {
-      title: 'Export Data',
+      title: 'Handoff: Export Data',
       description: 'Trigger CSV export of the current table view',
       location: 'src/components/Settings.tsx:4',
-      labels: ['handoff'],
+      labels: ['threadline', 'handoff'],
       priority: 'high',
       status: 'Backlog',
     },
   });
+});
+
+test('scan-handoffs includes invalid handoff calls with errors', async () => {
+  const cwd = await fixture({
+    'src/components/Bad.tsx': `import { handoff } from '@threadline/runtime';
+
+export function Bad() {
+  return handoff('not-object-form');
+}
+`,
+  });
+
+  const result = await scanHandoffs({ cwd, json: true });
+
+  assert.equal(result.records.length, 1);
+  assert.equal(result.records[0].valid, false);
+  assert.ok(result.records[0].errors.length > 0);
 });
 
 test('scan-handoffs ignores handoff text inside strings and comments', async () => {
