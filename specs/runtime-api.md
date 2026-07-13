@@ -26,20 +26,12 @@ yarn add @threadline/runtime
 
 ### `handoff()`
 
-Creates a stubbed function that can be used in place of real implementation.
+Creates a callable wrapper that can be used in place of real implementation.
 
 #### Signature
 
 ```typescript
-// Object form (recommended)
-function handoff<T = void>(options: HandoffOptions<T>): T | void;
-
-// Legacy positional form (backward compatibility)
-function handoff<T = void>(
-  title: string,
-  description?: string,
-  fallback?: () => T
-): T | void;
+function handoff<T = void>(options: HandoffOptions<T>): () => T | Promise<T>;
 ```
 
 #### Parameters
@@ -76,18 +68,18 @@ interface HandoffOptions<T = void> {
 
   /**
    * Safe, non-breaking fallback behavior.
-   * This function runs when the handoff is triggered in production.
+   * This function runs when the returned wrapper is invoked.
    * Should never throw errors or break the UI.
    * 
    * @example () => alert('Feature coming soon')
    */
-  fallback: () => T | void;
+  fallback: () => T | Promise<T>;
 }
 ```
 
 #### Returns
 
-The return value of the `fallback` function, or `void` if fallback returns nothing.
+A callable wrapper that invokes `fallback()` when called.
 
 ---
 
@@ -151,7 +143,7 @@ import { handoff } from '@threadline/runtime';
 
 function DeleteButton({ itemId }: { itemId: string }) {
   const handleDelete = handoff({
-    id: `delete-item`,
+    id: 'delete-item',
     title: 'Delete Item',
     description: `DELETE /api/items/${itemId}`,
     fallback: () => {
@@ -242,20 +234,19 @@ function UserProfile({ userId }: { userId: string }) {
 
 ---
 
-## Legacy Positional Form
+## Object Form Only
 
-For backward compatibility with earlier versions, you can use positional arguments:
+Use the object form for every handoff:
 
 ```typescript
-// Legacy form (not recommended for new code)
-const handler = handoff(
-  'Title',                    // title
-  'Description of what to do', // description
-  () => alert('Not implemented') // fallback
-);
+// Object form only
+const handler = handoff({
+  id: 'submit-form',
+  title: 'Submit Form',
+  description: 'POST form data to /api/submit',
+  fallback: () => alert('Form submission coming soon')
+});
 ```
-
-**Note:** This form generates an unstable ID. Use the object form for all new handoffs.
 
 ---
 
@@ -263,15 +254,17 @@ const handler = handoff(
 
 ### Development Mode
 
-When `process.env.NODE_ENV === 'development'`:
+When `process.env.NODE_ENV === 'development'`, calling the returned wrapper logs a warning before it runs the fallback:
 
 ```typescript
-handoff({
+const handler = handoff({
   id: 'test',
   title: 'Test Handoff',
   description: 'Test description',
   fallback: () => {}
 });
+
+handler();
 
 // Console output:
 // [Threadline] Handoff triggered: "Test Handoff"
@@ -285,8 +278,8 @@ handoff({
 When `process.env.NODE_ENV === 'production'`:
 
 - No console warnings
-- Fallback executes silently
-- No performance impact
+- The wrapper still runs the fallback
+- No performance impact beyond the wrapper call itself
 
 ---
 
@@ -324,24 +317,17 @@ When `process.env.NODE_ENV === 'production'`:
 
 ## Error Handling
 
-The `handoff()` function handles errors gracefully:
+The `handoff()` wrapper should keep the UI usable even if the fallback fails:
 
 ```typescript
-// Missing ID (logs error in dev, auto-generates in prod)
-handoff({
-  title: 'Missing ID',
-  fallback: () => {}
-});
-// Console: [Threadline] handoff() requires a stable "id" field
-
-// Fallback throws (caught and logged)
 handoff({
   id: 'error-handoff',
   title: 'Error',
   fallback: () => { throw new Error('oops'); }
 });
-// Error is caught, logged, and not re-thrown
 ```
+
+Implementations should catch fallback errors, report them in development, and avoid breaking the surrounding UI.
 
 ---
 
@@ -349,7 +335,7 @@ handoff({
 
 ```typescript
 // Import types
-import type { HandoffOptions, ParsedHandoff, HandoffScanResult } from '@threadline/runtime';
+import type { HandoffOptions } from '@threadline/runtime';
 
 // Use in your code
 const options: HandoffOptions = {

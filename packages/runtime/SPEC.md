@@ -25,6 +25,8 @@ interface HandoffOptions<T = void> {
 - `fallback` is required and must be safe to run in the current UI
 - the returned wrapper is what gets attached to events or callbacks
 - async fallbacks are allowed
+- development mode warns when the wrapper is invoked
+- production mode stays quiet and still runs the fallback
 
 ## Example
 
