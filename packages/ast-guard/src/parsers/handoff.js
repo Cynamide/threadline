@@ -4,6 +4,24 @@ import { isIdentifierToken, matchingTokenIndex, tokenize, tokensToSource } from 
 const CALLEE = 'handoff';
 const OPENERS = new Set(['(', '{', '[']);
 const CLOSERS = new Set([')', '}', ']']);
+const INVALID_CALLABLE_IDENTIFIERS = new Set([
+  'false',
+  'null',
+  'true',
+  'undefined',
+  'NaN',
+  'Infinity',
+  'new',
+  'class',
+  'function',
+  'void',
+  'typeof',
+  'delete',
+  'instanceof',
+  'in',
+  'yield',
+  'await',
+]);
 
 export function parseHandoffs(sourceCode, filePath) {
   const tokens = tokenize(sourceCode);
@@ -187,11 +205,14 @@ function isCallableExpression(tokens) {
   const first = tokens[0];
   const second = tokens[1];
   const hasArrow = tokens.some((token) => token.value === '=>');
-  return (
-    (first.type === 'identifier' && first.value === 'function') ||
-    (first.type === 'identifier' && first.value === 'async' && second?.value === 'function') ||
-    first.value === '(' ||
-    first.type === 'identifier' ||
-    hasArrow
-  );
+  if ((first.type === 'identifier' && first.value === 'function') || (first.type === 'identifier' && first.value === 'async' && second?.value === 'function') || hasArrow) {
+    return true;
+  }
+
+  if (first.value === '(') {
+    const closeIndex = tokens[tokens.length - 1]?.value === ')' ? matchingTokenIndex(tokens, 0, '(', ')') : -1;
+    return closeIndex === tokens.length - 1 && isCallableExpression(tokens.slice(1, -1));
+  }
+
+  return first.type === 'identifier' && !INVALID_CALLABLE_IDENTIFIERS.has(first.value);
 }

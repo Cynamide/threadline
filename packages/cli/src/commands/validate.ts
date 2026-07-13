@@ -79,7 +79,7 @@ export function formatValidateResult(result: ValidateResult, json = false): stri
 }
 
 async function filesToValidate(cwd: string, config: ThreadlineConfig, staged: boolean): Promise<string[]> {
-  const extensions = config.project.extensions;
+  const extensions = [...config.project.extensions, '.css', '.scss', '.sass'];
   const sourcePrefix = `${config.project.src_path.replace(/\/$/, '')}/`;
   const candidates = staged ? await stagedFiles(cwd) : await findFiles(join(cwd, config.project.src_path), { extensions });
   const normalized = staged

@@ -60,9 +60,9 @@ dev:
   port: 5173
   startup_timeout: 10000
 styling:
-  strategy: css-modules
+  strategy: tailwind
   enforce_scoping: true
-  tailwind_config: ""
+  tailwind_config: tailwind.config.ts
 git:
   branch_prefix: design/
   commit_style: conventional
@@ -100,16 +100,17 @@ export function Bad() {
   localStorage.setItem('x', 'y');
   return null;
 }`,
+    'src/components/global.css': '.button { color: red; }',
     'src/services/api.ts': 'export const api = true;',
   });
 
   const result = await validateProject({ cwd, json: true, staged: false });
 
   assert.equal(result.valid, false);
-  assert.equal(result.violations.length, 3);
+  assert.equal(result.violations.length, 4);
   assert.deepEqual(
     result.violations.map((violation) => violation.rule).sort(),
-    ['PATH001', 'STATE002', 'STATE006'],
+    ['PATH001', 'STATE002', 'STATE006', 'STYLE001'],
   );
 });
 
@@ -220,6 +221,66 @@ design_system:
   });
 
   await assert.rejects(() => loadConfig(cwd));
+});
+
+test('loadConfig strips inline YAML comments from scalar values', async () => {
+  const cwd = await fixture({
+    '.threadline/config.yaml': `version: "1.0"
+project:
+  framework: nextjs # comment
+  src_path: src
+  component_path: components
+  extensions:
+    - .tsx # comment
+dev:
+  run_command: npm run dev
+  port: 3000
+  startup_timeout: 10000
+styling:
+  strategy: tailwind # comment
+  enforce_scoping: true
+  tailwind_config: tailwind.config.ts # comment
+git:
+  branch_prefix: design/
+  commit_style: conventional # comment
+  squash_merge: true
+  pr_title_format: "ui: {description}" # comment
+handoff:
+  create_issues: true
+  status_on_create: Backlog
+  status_on_merge: Ready
+  default_assignee: null
+  team_id: null
+boundaries:
+  forbidden_imports: []
+  forbidden_paths: []
+  whitelisted_imports: []
+  whitelisted_components: []
+validation:
+  pre_push: true
+  pre_commit: false
+  auto_fix: true
+  max_warnings: 0
+design_system:
+  library: shadcn # comment
+  import_path: "@/components/ui" # comment
+  allow_new_primitives: false
+  component_aliases:
+    Button: PrimaryButton # comment
+`,
+  });
+
+  const config = await loadConfig(cwd);
+
+  assert.equal(config.project.framework, 'nextjs');
+  assert.equal(config.project.extensions[0], '.tsx');
+  assert.equal(config.styling?.strategy, 'tailwind');
+  assert.equal(config.styling?.tailwind_config, 'tailwind.config.ts');
+  assert.equal(config.git.commit_style, 'conventional');
+  assert.equal(config.git.pr_title_format, 'ui: {description}');
+  assert.equal(config.design_system?.library, 'shadcn');
+  assert.equal(config.design_system?.import_path, '@/components/ui');
+  assert.equal(config.design_system?.component_aliases.Button, 'PrimaryButton');
 });
 
 test('init validate and scan-handoffs work end to end in one fixture repo', async () => {

@@ -99,7 +99,7 @@ function readScalar(text: string, section: string, key: string, fallback: string
   }
   const value = line.slice(line.indexOf(':') + 1).trim();
   if (value === 'null') return '';
-  return value.replace(/^"|"$/g, '');
+  return stripInlineComment(value).replace(/^"|"$/g, '');
 }
 
 function readList(text: string, section: string, key: string, fallback: string[], required = false): string[] {
@@ -115,7 +115,7 @@ function readList(text: string, section: string, key: string, fallback: string[]
   for (const line of lines.slice(start + 1)) {
     if (line.startsWith('  ') && !line.startsWith('    ')) break;
     const trimmed = line.trim();
-    if (trimmed.startsWith('- ')) items.push(trimmed.slice(2).replace(/^"|"$/g, ''));
+    if (trimmed.startsWith('- ')) items.push(stripInlineComment(trimmed.slice(2)).replace(/^"|"$/g, ''));
   }
   return items;
 }
@@ -151,7 +151,7 @@ function readNullableScalar(text: string, section: string, key: string, required
   }
   const value = line.slice(line.indexOf(':') + 1).trim();
   if (value === 'null') return null;
-  return value.replace(/^"|"$/g, '');
+  return stripInlineComment(value).replace(/^"|"$/g, '');
 }
 
 function readTopLevelScalar(text: string, key: string, fallback: string, required = false): string {
@@ -162,7 +162,7 @@ function readTopLevelScalar(text: string, key: string, fallback: string, require
   }
   const value = line.slice(line.indexOf(':') + 1).trim();
   if (value === 'null') return '';
-  return value.replace(/^"|"$/g, '');
+  return stripInlineComment(value).replace(/^"|"$/g, '');
 }
 
 function assertRelativePath(value: string, label: string): void {
@@ -186,10 +186,46 @@ function readMapping(text: string, section: string, key: string, required = fals
     const colon = trimmed.indexOf(':');
     if (colon === -1) continue;
     const name = trimmed.slice(0, colon).trim();
-    const value = trimmed.slice(colon + 1).trim().replace(/^"|"$/g, '');
+    const value = stripInlineComment(trimmed.slice(colon + 1).trim()).replace(/^"|"$/g, '');
     if (name) entries[name] = value;
   }
   return entries;
+}
+
+function stripInlineComment(value: string): string {
+  let singleQuoted = false;
+  let doubleQuoted = false;
+  let escaped = false;
+
+  for (let index = 0; index < value.length; index += 1) {
+    const character = value[index];
+
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+
+    if (character === '\\' && doubleQuoted) {
+      escaped = true;
+      continue;
+    }
+
+    if (character === '\'' && !doubleQuoted) {
+      singleQuoted = !singleQuoted;
+      continue;
+    }
+
+    if (character === '"' && !singleQuoted) {
+      doubleQuoted = !doubleQuoted;
+      continue;
+    }
+
+    if (character === '#' && !singleQuoted && !doubleQuoted) {
+      return value.slice(0, index).trimEnd();
+    }
+  }
+
+  return value.trimEnd();
 }
 
 function sectionLines(text: string, section: string): string[] {

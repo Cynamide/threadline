@@ -102,6 +102,30 @@ test('validateHandoffSyntax reports documented handoff codes and description err
   );
 });
 
+test('validateHandoffSyntax rejects non-callable fallback expressions', () => {
+  const handoffs = parseHandoffs(
+    [
+      'handoff({',
+      "  id: 'false-fallback',",
+      "  title: 'False Fallback',",
+      '  fallback: false,',
+      '});',
+      '',
+      'handoff({',
+      "  id: 'paren-fallback',",
+      "  title: 'Paren Fallback',",
+      '  fallback: (0),',
+      '});',
+    ].join('\n'),
+    'src/components/Example.tsx',
+  );
+
+  assert.deepEqual(
+    handoffs.map((handoff) => validateHandoffSyntax(handoff).some((violation) => violation.code === 'HANDOFF005')),
+    [true, true],
+  );
+});
+
 test('validateStateBoundaries detects UI state violations including unsafe fallback bodies', () => {
   const source = [
     'export function ProfileCard() {',
