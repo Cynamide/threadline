@@ -35,6 +35,7 @@ export interface ConfigInput {
 }
 
 export interface ThreadlineConfig {
+  version: string;
   project: {
     framework: Framework;
     src_path: string;
@@ -44,10 +45,18 @@ export interface ThreadlineConfig {
   dev: {
     run_command: string;
     port: number;
+    startup_timeout: number;
   };
   styling?: {
     strategy: StylingStrategy;
     enforce_scoping: boolean;
+    tailwind_config: string;
+  };
+  git: {
+    branch_prefix: string;
+    commit_style: 'conventional' | 'simple';
+    squash_merge: boolean;
+    pr_title_format: string;
   };
   handoff?: {
     create_issues?: boolean;
@@ -63,11 +72,15 @@ export interface ThreadlineConfig {
     whitelisted_components: string[];
   };
   validation: {
+    pre_push: boolean;
+    pre_commit: boolean;
+    auto_fix: boolean;
     max_warnings: number;
   };
   design_system?: {
     library: DesignSystemLibrary;
     import_path: string;
     allow_new_primitives: boolean;
+    component_aliases: Record<string, string>;
   };
 }

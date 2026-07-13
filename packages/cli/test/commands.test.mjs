@@ -58,15 +58,22 @@ project:
 dev:
   run_command: npm run dev
   port: 5173
+  startup_timeout: 10000
 styling:
   strategy: css-modules
   enforce_scoping: true
+  tailwind_config: ""
 git:
   branch_prefix: design/
+  commit_style: conventional
+  squash_merge: true
+  pr_title_format: "ui: {description}"
 handoff:
   create_issues: true
   status_on_create: Backlog
   status_on_merge: Ready
+  default_assignee: null
+  team_id: null
 boundaries:
   forbidden_imports:
     - axios
@@ -79,8 +86,13 @@ design_system:
   library: none
   import_path: ""
   allow_new_primitives: false
+  component_aliases:
+    Button: PrimaryButton
+    Input: TextInput
 validation:
   pre_push: true
+  pre_commit: false
+  auto_fix: true
   max_warnings: 0
 `,
     'src/components/Bad.tsx': `import axios from 'axios';
@@ -113,13 +125,22 @@ project:
 dev:
   run_command: npm run dev
   port: 5173
+  startup_timeout: 10000
 styling:
   strategy: css-modules
   enforce_scoping: true
+  tailwind_config: ""
+git:
+  branch_prefix: design/
+  commit_style: conventional
+  squash_merge: true
+  pr_title_format: "ui: {description}"
 handoff:
   create_issues: true
   status_on_create: Backlog
   status_on_merge: Ready
+  default_assignee: null
+  team_id: null
 boundaries:
   forbidden_imports:
     - axios
@@ -127,11 +148,16 @@ boundaries:
   whitelisted_imports: []
   whitelisted_components: []
 validation:
+  pre_push: true
+  pre_commit: false
+  auto_fix: true
   max_warnings: 0
 design_system:
   library: none
   import_path: ""
   allow_new_primitives: false
+  component_aliases:
+    Button: PrimaryButton
 `,
     'src/staged.ts': "import axios from 'axios';",
     'src/unstaged.ts': "import axios from 'axios';",
@@ -158,20 +184,38 @@ project:
 dev:
   run_command: npm run dev
   port: not-a-number
+  startup_timeout: 10000
 styling:
   strategy: css-modules
   enforce_scoping: true
+  tailwind_config: ""
+git:
+  branch_prefix: design/
+  commit_style: conventional
+  squash_merge: true
+  pr_title_format: "ui: {description}"
+handoff:
+  create_issues: true
+  status_on_create: Backlog
+  status_on_merge: Ready
+  default_assignee: null
+  team_id: null
 boundaries:
   forbidden_imports: []
   forbidden_paths: []
   whitelisted_imports: []
   whitelisted_components: []
 validation:
+  pre_push: true
+  pre_commit: false
+  auto_fix: true
   max_warnings: 0
 design_system:
   library: none
   import_path: ""
   allow_new_primitives: false
+  component_aliases:
+    Button: PrimaryButton
 `,
   });
 
@@ -276,4 +320,81 @@ test('install-hooks writes an executable pre-push hook idempotently', async () =
   assert.equal(second.installed, true);
   assert.match(await readFile(hookPath, 'utf8'), /threadline validate --staged/);
   assert.equal((await stat(hookPath)).mode & 0o111, 0o111);
+});
+
+test('pre-push hook blocks invalid staged code', async () => {
+  const cwd = await fixture({
+    '.threadline/config.yaml': `version: "1.0"
+project:
+  framework: vite
+  src_path: src
+  component_path: components
+  extensions:
+    - .ts
+dev:
+  run_command: npm run dev
+  port: 5173
+  startup_timeout: 10000
+styling:
+  strategy: css-modules
+  enforce_scoping: true
+  tailwind_config: ""
+git:
+  branch_prefix: design/
+  commit_style: conventional
+  squash_merge: true
+  pr_title_format: "ui: {description}"
+handoff:
+  create_issues: true
+  status_on_create: Backlog
+  status_on_merge: Ready
+  default_assignee: null
+  team_id: null
+boundaries:
+  forbidden_imports:
+    - axios
+  forbidden_paths: []
+  whitelisted_imports: []
+  whitelisted_components: []
+validation:
+  pre_push: true
+  pre_commit: false
+  auto_fix: true
+  max_warnings: 0
+design_system:
+  library: none
+  import_path: ""
+  allow_new_primitives: false
+  component_aliases:
+    Button: PrimaryButton
+`,
+    'src/bad.ts': "import axios from 'axios';\n",
+  });
+  await execFile('git', ['init'], { cwd });
+  await installHooks({ cwd });
+  await execFile('git', ['add', 'src/bad.ts', '.threadline/config.yaml'], { cwd });
+
+  const binDir = join(cwd, '.tmp-bin');
+  await mkdir(binDir, { recursive: true });
+  await writeFile(
+    join(binDir, 'threadline'),
+    `#!/bin/sh
+exec node ${join(process.cwd(), 'dist/index.js')} "$@"
+`,
+  );
+  await chmod(join(binDir, 'threadline'), 0o755);
+
+  await assert.rejects(
+    execFile(
+      join(cwd, '.git/hooks/pre-push'),
+      ['origin', 'https://example.com'],
+      {
+        cwd,
+        env: {
+          ...process.env,
+          PATH: `${binDir}:${process.env.PATH ?? ''}`,
+        },
+      },
+    ),
+  );
 });

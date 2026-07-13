@@ -99,14 +99,9 @@ describe('handoff()', () => {
     assert.deepEqual(warnings, []);
   });
 
-  it('catches synchronous fallback errors, reports them in development, and keeps the wrapper callable', () => {
-    const errors: unknown[][] = [];
-
+  it('lets synchronous fallback errors propagate', () => {
     process.env.NODE_ENV = 'development';
     console.warn = () => {};
-    console.error = (...args: unknown[]) => {
-      errors.push(args);
-    };
 
     const wrapped = handoff({
       id: 'sync-failure',
@@ -116,20 +111,12 @@ describe('handoff()', () => {
       },
     });
 
-    assert.equal(wrapped(), undefined);
-    assert.equal(errors.length, 1);
-    assert.equal(errors[0]?.[0], '[Threadline] Handoff fallback failed:');
-    assert.match(String(errors[0]?.[1]), /boom/);
+    assert.throws(() => wrapped(), /boom/);
   });
 
-  it('catches async fallback rejections, reports them in development, and resolves without throwing', async () => {
-    const errors: unknown[][] = [];
-
+  it('lets async fallback rejections propagate', async () => {
     process.env.NODE_ENV = 'development';
     console.warn = () => {};
-    console.error = (...args: unknown[]) => {
-      errors.push(args);
-    };
 
     const wrapped = handoff({
       id: 'async-failure',
@@ -139,11 +126,8 @@ describe('handoff()', () => {
       },
     });
 
-    await assert.doesNotReject(async () => {
-      assert.equal(await wrapped(), undefined);
-    });
-    assert.equal(errors.length, 1);
-    assert.equal(errors[0]?.[0], '[Threadline] Handoff fallback failed:');
-    assert.match(String(errors[0]?.[1]), /async boom/);
+    await assert.rejects(async () => {
+      await wrapped();
+    }, /async boom/);
   });
 });
