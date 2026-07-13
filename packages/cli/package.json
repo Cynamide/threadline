@@ -1,0 +1,48 @@
+{
+  "name": "@threadline/cli",
+  "version": "0.1.0",
+  "description": "Threadline CLI for repo setup, validation, handoff scanning, and local hooks.",
+  "type": "module",
+  "bin": {
+    "threadline": "./dist/index.js"
+  },
+  "exports": {
+    ".": "./dist/index.js",
+    "./commands/init": "./dist/commands/init.js",
+    "./commands/validate": "./dist/commands/validate.js",
+    "./commands/scan-handoffs": "./dist/commands/scan-handoffs.js",
+    "./commands/install-hooks": "./dist/commands/install-hooks.js",
+    "./detectors/framework": "./dist/detectors/framework.js",
+    "./detectors/styling": "./dist/detectors/styling.js",
+    "./detectors/components": "./dist/detectors/components.js",
+    "./generators/config": "./dist/generators/config.js"
+  },
+  "files": [
+    "dist",
+    "SPEC.md",
+    "CONTEXT.md"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "npm run build && node --test test/*.test.mjs",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "threadline",
+    "cli",
+    "design",
+    "handoff"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Cynamide/threadline",
+    "directory": "packages/cli"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
