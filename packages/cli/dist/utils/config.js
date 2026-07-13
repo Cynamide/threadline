@@ -45,13 +45,30 @@ export async function loadConfig(cwd        )                            {
       enforce_scoping: readScalar(text, 'styling', 'enforce_scoping', 'true') === 'true',
     },
     handoff: {
-      linear_status_on_create: readScalar(text, 'handoff', 'linear_status_on_create', 'Backlog'),
+      create_issues: readScalar(text, 'handoff', 'create_issues', readScalar(text, 'handoff', 'create_linear_issues', 'true')) === 'true',
+      status_on_create: readScalar(
+        text,
+        'handoff',
+        'status_on_create',
+        readScalar(text, 'handoff', 'linear_status_on_create', 'Backlog'),
+      ),
+      status_on_merge: readScalar(
+        text,
+        'handoff',
+        'status_on_merge',
+        readScalar(text, 'handoff', 'linear_status_on_merge', 'Ready'),
+      ),
+      default_assignee: readScalar(text, 'handoff', 'default_assignee', ''),
+      team_id: readScalar(text, 'handoff', 'team_id', ''),
     },
     boundaries: {
       forbidden_imports: readList(text, 'boundaries', 'forbidden_imports', []),
       forbidden_paths: readList(text, 'boundaries', 'forbidden_paths', []),
       whitelisted_imports: readList(text, 'boundaries', 'whitelisted_imports', []),
       whitelisted_components: readList(text, 'boundaries', 'whitelisted_components', []),
+    },
+    validation: {
+      max_warnings: Number(readScalar(text, 'validation', 'max_warnings', '0')),
     },
     design_system: {
       library: readScalar(text, 'design_system', 'library', 'none')                                                ,

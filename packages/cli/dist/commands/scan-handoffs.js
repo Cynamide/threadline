@@ -37,7 +37,7 @@ export async function scanHandoffs(options                     )                
     extensions: config.project.extensions,
   })).map((file) => `${config.project.src_path.replace(/\/$/, '')}/${file}`);
   const records                  = [];
-  const status = config.handoff?.linear_status_on_create ?? 'Backlog';
+  const status = config.handoff?.status_on_create ?? config.handoff?.linear_status_on_create ?? 'Backlog';
 
   for (const filePath of files) {
     const source = await readFile(join(options.cwd, filePath), 'utf8');
@@ -46,8 +46,9 @@ export async function scanHandoffs(options                     )                
       const location = locationForOffset(source, call.offset);
       const title = fields.title ?? 'Untitled handoff';
       const description = fields.description ?? '';
-      const id = fields.id ?? slug(title);
+      const id = fields.id ?? '';
       const errors = [
+        ...(fields.id ? [] : ['missing id']),
         ...(fields.title ? [] : ['missing title']),
         ...(fields.description ? [] : ['missing description']),
       ];
@@ -61,10 +62,10 @@ export async function scanHandoffs(options                     )                
         valid: errors.length === 0,
         errors,
         trackerPayload: {
-          title: `Handoff: ${title}`,
+          title,
           description,
           location: `${filePath}:${location.line}`,
-          labels: ['threadline', 'handoff'],
+          labels: ['handoff'],
           priority: fields.priority ?? 'normal',
           status,
         },
@@ -176,12 +177,4 @@ function locationForOffset(source        , offset        )                      
   const before = source.slice(0, offset);
   const lines = before.split('\n');
   return { line: lines.length, column: lines[lines.length - 1].length + 1 };
-}
-
-function slug(value        )         {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
 }

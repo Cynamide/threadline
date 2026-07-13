@@ -94,7 +94,7 @@ export function Bad() {
   assert.equal(result.violations.length, 3);
   assert.deepEqual(
     result.violations.map((violation) => violation.rule).sort(),
-    ['forbidden-import', 'forbidden-import', 'forbidden-path'],
+    ['PATH001', 'STATE002', 'STATE006'],
   );
 });
 
@@ -155,10 +155,10 @@ export function Settings() {
     valid: true,
     errors: [],
     trackerPayload: {
-      title: 'Handoff: Export Data',
+      title: 'Export Data',
       description: 'Trigger CSV export of the current table view',
       location: 'src/components/Settings.tsx:4',
-      labels: ['threadline', 'handoff'],
+      labels: ['handoff'],
       priority: 'high',
       status: 'Backlog',
     },

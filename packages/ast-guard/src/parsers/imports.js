@@ -1,4 +1,5 @@
 import { getLineColumn, makeViolation } from '../location.js';
+import { isIdentifierToken, isStringToken, matchingTokenIndex, tokenize } from '../tokenize.js';
 
 const FORBIDDEN_IMPORT_CODES = new Map([
   ['fetch', 'STATE001'],
@@ -12,27 +13,28 @@ const FORBIDDEN_IMPORT_CODES = new Map([
   ['useNavigate', 'STATE007'],
 ]);
 
-const MODULE_DEFAULTS = new Map([
-  ['axios', 'axios'],
-  ['swr', 'useSWR'],
-]);
-
 export function detectForbiddenImports(source, filePath, whitelistedImports = []) {
+  const tokens = tokenize(source);
   const whitelist = new Set(whitelistedImports);
   const violations = [];
-  const importPattern = /^\s*import\s+(.+?)\s+from\s+['"]([^'"]+)['"];?/gm;
 
-  for (const match of source.matchAll(importPattern)) {
-    const clause = match[1];
-    const moduleName = match[2];
-    const names = extractImportNames(clause, moduleName);
-    const clauseOffset = match[0].indexOf(clause);
+  for (let index = 0; index < tokens.length; index += 1) {
+    if (!isIdentifierToken(tokens[index], 'import')) continue;
+    if (tokens[index + 1]?.value === '(') continue;
 
-    for (const { name, localName, offset } of names) {
+    const fromIndex = findFromIndex(tokens, index + 1);
+    if (fromIndex === -1) continue;
+
+    const moduleToken = findFirstStringLikeToken(tokens, fromIndex + 1);
+    if (!moduleToken || !isStringToken(moduleToken)) continue;
+    const moduleName = normalizeModuleName(moduleToken.value);
+    const specifiers = extractImportSpecifiers(tokens, index + 1, fromIndex - 1, moduleName);
+
+    for (const { name, localName, token } of specifiers) {
       if (whitelist.has(name) || whitelist.has(localName)) continue;
-      const code = FORBIDDEN_IMPORT_CODES.get(name);
+      const code = FORBIDDEN_IMPORT_CODES.get(name) ?? FORBIDDEN_IMPORT_CODES.get(localName);
       if (!code) continue;
-      const location = getLineColumn(source, match.index + clauseOffset + offset);
+      const location = getLineColumn(source, token.start);
       violations.push(
         makeViolation({
           code,
@@ -48,30 +50,99 @@ export function detectForbiddenImports(source, filePath, whitelistedImports = []
   return violations;
 }
 
-function extractImportNames(clause, moduleName) {
-  const names = [];
-  const defaultName = MODULE_DEFAULTS.get(moduleName);
-  const trimmedClause = clause.trim();
-
-  if (defaultName && !trimmedClause.startsWith('{') && !trimmedClause.startsWith('*')) {
-    const localName = trimmedClause.split(',')[0].trim();
-    names.push({ name: defaultName, localName, offset: clause.indexOf(localName) });
+function findFromIndex(tokens, startIndex) {
+  for (let index = startIndex; index < tokens.length; index += 1) {
+    const token = tokens[index];
+    if (isIdentifierToken(token, 'from')) return index;
+    if (token.value === ';' || token.value === '\n') break;
   }
+  return -1;
+}
 
-  const namedMatch = clause.match(/\{([^}]+)\}/);
-  if (namedMatch) {
-    const namedBody = namedMatch[1];
-    for (const rawSpecifier of namedBody.split(',')) {
-      const specifier = rawSpecifier.trim();
-      if (!specifier) continue;
-      const [importedName, localName = importedName] = specifier.split(/\s+as\s+/).map((part) => part.trim());
-      names.push({
-        name: importedName,
-        localName,
-        offset: clause.indexOf(specifier) + specifier.indexOf(importedName),
+function findFirstStringLikeToken(tokens, startIndex) {
+  for (let index = startIndex; index < tokens.length; index += 1) {
+    if (isStringToken(tokens[index])) return tokens[index];
+    if (tokens[index].value === ';') break;
+  }
+  return null;
+}
+
+function extractImportSpecifiers(tokens, startIndex, endIndex, moduleName) {
+  const specifiers = [];
+  let index = startIndex;
+
+  while (index <= endIndex) {
+    const token = tokens[index];
+    if (token.value === '{') {
+      const closeIndex = matchingTokenIndex(tokens, index, '{', '}');
+      if (closeIndex === -1 || closeIndex > endIndex) break;
+      specifiers.push(...extractNamedSpecifiers(tokens.slice(index + 1, closeIndex), moduleName));
+      index = closeIndex + 1;
+      continue;
+    }
+
+    if (token.value === '*') {
+      const asToken = tokens[index + 1];
+      const nameToken = tokens[index + 2];
+      if (isIdentifierToken(asToken, 'as') && isIdentifierToken(nameToken)) {
+        specifiers.push({
+          name: moduleName,
+          localName: nameToken.value,
+          token: nameToken,
+        });
+      }
+      break;
+    }
+
+    if (isIdentifierToken(token)) {
+      specifiers.push({
+        name: moduleName,
+        localName: token.value,
+        token,
       });
     }
+
+    index += 1;
+    if (tokens[index]?.value === ',') index += 1;
   }
 
-  return names;
+  return specifiers;
+}
+
+function extractNamedSpecifiers(tokens, moduleName) {
+  const specifiers = [];
+  let index = 0;
+
+  while (index < tokens.length) {
+    const token = tokens[index];
+    if (!isIdentifierToken(token)) {
+      index += 1;
+      continue;
+    }
+
+    let importedName = token.value;
+    let localName = token.value;
+
+    if (tokens[index + 1]?.value === 'as' && isIdentifierToken(tokens[index + 2])) {
+      localName = tokens[index + 2].value;
+      index += 2;
+    }
+
+    specifiers.push({
+      name: importedName,
+      localName,
+      token,
+      moduleName,
+    });
+
+    index += 1;
+    while (index < tokens.length && tokens[index].value !== ',' && tokens[index].value !== '}') index += 1;
+    if (tokens[index]?.value === ',') index += 1;
+  }
+
+  return specifiers;
+}
+
+function normalizeModuleName(raw) {
+  return raw.slice(1, -1);
 }

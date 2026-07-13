@@ -33,9 +33,9 @@ git:
   pr_title_format: "ui: {description}"
 
 handoff:
-  create_linear_issues: true
-  linear_status_on_create: Backlog
-  linear_status_on_merge: Ready
+  create_issues: true
+  status_on_create: Backlog
+  status_on_merge: Ready
   default_assignee: null
   team_id: null
 

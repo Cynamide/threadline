@@ -50,13 +50,23 @@ export interface ThreadlineConfig {
     enforce_scoping: boolean;
   };
   handoff?: {
+    create_issues?: boolean;
+    status_on_create?: string;
+    status_on_merge?: string;
+    default_assignee?: string | null;
+    team_id?: string | null;
+    create_linear_issues?: boolean;
     linear_status_on_create?: string;
+    linear_status_on_merge?: string;
   };
   boundaries: {
     forbidden_imports: string[];
     forbidden_paths: string[];
     whitelisted_imports: string[];
     whitelisted_components: string[];
+  };
+  validation: {
+    max_warnings: number;
   };
   design_system?: {
     library: DesignSystemLibrary;

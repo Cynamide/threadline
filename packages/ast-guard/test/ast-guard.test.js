@@ -63,7 +63,22 @@ test('parseHandoffs extracts multiple object-form handoffs with stable locations
   assert.equal(handoffs[1].fallback.callable, true);
 });
 
-test('validateHandoffSyntax reports documented handoff codes and description warning', () => {
+test('parseHandoffs treats bare identifiers as callable fallbacks', () => {
+  const [handoff] = parseHandoffs(
+    [
+      'handoff({',
+      "  id: 'export-data',",
+      "  title: 'Export Data',",
+      '  fallback: onExportQueued,',
+      '});',
+    ].join('\n'),
+    'src/components/ExportButton.tsx',
+  );
+
+  assert.equal(handoff.fallback.callable, true);
+});
+
+test('validateHandoffSyntax reports documented handoff codes and description error', () => {
   const [handoff] = parseHandoffs(
     [
       'handoff({',
@@ -81,7 +96,7 @@ test('validateHandoffSyntax reports documented handoff codes and description war
     [
       { code: 'HANDOFF002', severity: 'error', line: 2, column: 7 },
       { code: 'HANDOFF003', severity: 'error', line: 1, column: 1 },
-      { code: 'HANDOFF004', severity: 'warning', line: 3, column: 16 },
+      { code: 'HANDOFF004', severity: 'error', line: 3, column: 16 },
       { code: 'HANDOFF005', severity: 'error', line: 1, column: 1 },
     ],
   );
@@ -153,6 +168,11 @@ test('styling validators enforce Tailwind and CSS modules strategies', () => {
     'src/components/Button.tsx',
     'tailwind',
   );
+  const tailwindBraceViolations = validateStylingScope(
+    '<button className={"px-4 my-custom-button"}>Save</button>',
+    'src/components/Button.tsx',
+    'tailwind',
+  );
   const cssModuleViolations = validateStylingScope(
     '<button className="primary">Save</button>',
     'src/components/Button.tsx',
@@ -160,6 +180,7 @@ test('styling validators enforce Tailwind and CSS modules strategies', () => {
   );
 
   assert.deepEqual(tailwindViolations.map(({ code }) => code), ['STYLE002']);
+  assert.deepEqual(tailwindBraceViolations.map(({ code }) => code), ['STYLE002']);
   assert.deepEqual(cssModuleViolations.map(({ code }) => code), ['STYLE002']);
 });
 
@@ -196,8 +217,8 @@ test('runValidation returns stable summary and forbidden path violations', () =>
   assert.deepEqual(result.summary, {
     filesValidated: 3,
     handoffsFound: 1,
-    errorCount: 2,
-    warningCount: 1,
+    errorCount: 3,
+    warningCount: 0,
   });
   assert.deepEqual(
     result.violations.map(({ code, filePath }) => ({ code, filePath })),

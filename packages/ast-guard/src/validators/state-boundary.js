@@ -1,14 +1,20 @@
 import { getLineColumn, makeViolation } from '../location.js';
 import { matchesAnyGlob } from '../scan.js';
+import { isIdentifierToken, tokenize } from '../tokenize.js';
 
 const STATE_RULES = [
-  { code: 'STATE001', name: 'fetch', pattern: /\bfetch\s*\(/g },
-  { code: 'STATE002', name: 'axios', pattern: /\baxios(?:\s*\(|\s*\.)/g },
-  { code: 'STATE003', name: 'useSWR', pattern: /\buseSWR\s*\(/g },
-  { code: 'STATE004', name: 'useQuery', pattern: /\buseQuery\s*\(/g },
-  { code: 'STATE005', name: 'Redux hooks', pattern: /\b(?:useDispatch|useSelector)\s*\(/g },
-  { code: 'STATE006', name: 'browser storage', pattern: /\b(?:localStorage|sessionStorage)\s*\./g },
-  { code: 'STATE007', name: 'router navigation', pattern: /\b(?:useNavigate\s*\(|navigate\s*\(|router\.push\s*\()/g },
+  { code: 'STATE001', name: 'fetch', sequence: ['fetch', '('] },
+  { code: 'STATE002', name: 'axios', sequence: ['axios', '('] },
+  { code: 'STATE002', name: 'axios', sequence: ['axios', '.'] },
+  { code: 'STATE003', name: 'useSWR', sequence: ['useSWR', '('] },
+  { code: 'STATE004', name: 'useQuery', sequence: ['useQuery', '('] },
+  { code: 'STATE005', name: 'Redux hooks', sequence: ['useDispatch', '('] },
+  { code: 'STATE005', name: 'Redux hooks', sequence: ['useSelector', '('] },
+  { code: 'STATE006', name: 'browser storage', sequence: ['localStorage', '.'] },
+  { code: 'STATE006', name: 'browser storage', sequence: ['sessionStorage', '.'] },
+  { code: 'STATE007', name: 'router navigation', sequence: ['useNavigate', '('] },
+  { code: 'STATE007', name: 'router navigation', sequence: ['navigate', '('] },
+  { code: 'STATE007', name: 'router navigation', sequence: ['router', '.', 'push', '('] },
 ];
 
 export function validateStateBoundaries(source, filePath, config = {}) {
@@ -16,21 +22,23 @@ export function validateStateBoundaries(source, filePath, config = {}) {
     return [];
   }
 
-  const executableSource = stripImportLines(source);
+  const tokens = tokenize(source);
   const violations = [];
 
   for (const rule of STATE_RULES) {
-    for (const match of executableSource.matchAll(rule.pattern)) {
-      const location = getLineColumn(source, match.index);
-      violations.push(
-        makeViolation({
-          code: rule.code,
-          filePath,
-          line: location.line,
-          column: location.column,
-          message: `Move ${rule.name} out of the UI component or wrap it behind an approved handoff boundary.`,
-        }),
-      );
+    for (let index = 0; index < tokens.length; index += 1) {
+      if (matchesSequence(tokens, index, rule.sequence)) {
+        const location = getLineColumn(source, tokens[index].start);
+        violations.push(
+          makeViolation({
+            code: rule.code,
+            filePath,
+            line: location.line,
+            column: location.column,
+            message: `Move ${rule.name} out of the UI component or wrap it behind an approved handoff boundary.`,
+          }),
+        );
+      }
     }
   }
 
@@ -52,9 +60,16 @@ function isWhitelistedComponent(filePath, config) {
   return matchesAnyGlob(filePath, config.boundaries?.whitelisted_components ?? []);
 }
 
-function stripImportLines(source) {
-  return source
-    .split('\n')
-    .map((line) => (/^\s*import\b/.test(line) ? ''.padEnd(line.length, ' ') : line))
-    .join('\n');
+function matchesSequence(tokens, startIndex, sequence) {
+  for (let offset = 0; offset < sequence.length; offset += 1) {
+    const token = tokens[startIndex + offset];
+    if (!token) return false;
+    if (token.value !== sequence[offset]) return false;
+  }
+
+  if (startIndex > 0 && isIdentifierToken(tokens[startIndex - 1])) {
+    return false;
+  }
+
+  return true;
 }

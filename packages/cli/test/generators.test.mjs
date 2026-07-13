@@ -22,7 +22,8 @@ test('generates schema-aligned config yaml with explicit knobs', () => {
   assert.match(yaml, /^version: "1.0"/);
   assert.match(yaml, /framework: nextjs/);
   assert.match(yaml, /branch_prefix: design\//);
-  assert.match(yaml, /create_linear_issues: true/);
+  assert.match(yaml, /create_issues: true/);
+  assert.match(yaml, /status_on_create: Backlog/);
   assert.match(yaml, /allow_new_primitives: false/);
   assert.match(yaml, /max_warnings: 0/);
 });
