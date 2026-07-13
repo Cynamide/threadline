@@ -1,5 +1,4 @@
 import { getLineColumn, makeViolation } from '../location.js';
-import { parseHandoffs } from '../parsers/handoff.js';
 import { matchesAnyGlob } from '../scan.js';
 import { isIdentifierToken, tokenize } from '../tokenize.js';
 
@@ -24,13 +23,11 @@ export function validateStateBoundaries(source, filePath, config = {}) {
   }
 
   const tokens = tokenize(source);
-  const allowedRanges = allowedHandoffRanges(source, filePath);
   const violations = [];
 
   for (const rule of STATE_RULES) {
     for (let index = 0; index < tokens.length; index += 1) {
       if (matchesSequence(tokens, index, rule.sequence)) {
-        if (isWithinAllowedRange(index, allowedRanges)) continue;
         const location = getLineColumn(source, tokens[index].start);
         violations.push(
           makeViolation({
@@ -61,17 +58,6 @@ function isUiComponent(filePath, config) {
 
 function isWhitelistedComponent(filePath, config) {
   return matchesAnyGlob(filePath, config.boundaries?.whitelisted_components ?? []);
-}
-
-function allowedHandoffRanges(source, filePath) {
-  return parseHandoffs(source, filePath)
-    .map((handoff) => handoff.properties.fallback)
-    .filter(Boolean)
-    .map((fallback) => ({ start: fallback.valueStartIndex, end: fallback.valueEndIndex }));
-}
-
-function isWithinAllowedRange(index, ranges) {
-  return ranges.some((range) => index >= range.start && index <= range.end);
 }
 
 function matchesSequence(tokens, startIndex, sequence) {

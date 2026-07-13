@@ -46,7 +46,7 @@ async function ensureLinkedPackage(linkPath, targetPath) {
   try {
     await unlink(linkPath);
   } catch {
-    // ignore missing links
+    await rm(linkPath, { force: true, recursive: true });
   }
   await symlink(targetPath, linkPath, 'dir');
 }
