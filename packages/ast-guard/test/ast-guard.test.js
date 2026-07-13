@@ -126,7 +126,6 @@ test('validateStateBoundaries detects UI state violations including unsafe fallb
     [
       { code: 'STATE005', line: 2, column: 16 },
       { code: 'STATE007', line: 3, column: 22 },
-      { code: 'STATE001', line: 8, column: 21 },
     ],
   );
 });

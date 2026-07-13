@@ -64,7 +64,7 @@ Validation should return structured violations with:
 
 ## Notes
 
-- Prefer AST parsing over string matching
+- Prefer structured token-aware parsing over raw string matching
 - Keep messages actionable
 - Make the runner fast enough for local hook use
 

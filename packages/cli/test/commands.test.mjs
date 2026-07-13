@@ -10,6 +10,7 @@ import { installHooks } from '../dist/commands/install-hooks.js';
 import { initProject } from '../dist/commands/init.js';
 import { scanHandoffs } from '../dist/commands/scan-handoffs.js';
 import { validateProject } from '../dist/commands/validate.js';
+import { loadConfig } from '../dist/utils/config.js';
 
 const execFile = promisify(execFileCallback);
 
@@ -109,12 +110,28 @@ project:
   component_path: components
   extensions:
     - .ts
+dev:
+  run_command: npm run dev
+  port: 5173
+styling:
+  strategy: css-modules
+  enforce_scoping: true
+handoff:
+  create_issues: true
+  status_on_create: Backlog
+  status_on_merge: Ready
 boundaries:
   forbidden_imports:
     - axios
   forbidden_paths: []
   whitelisted_imports: []
   whitelisted_components: []
+validation:
+  max_warnings: 0
+design_system:
+  library: none
+  import_path: ""
+  allow_new_primitives: false
 `,
     'src/staged.ts': "import axios from 'axios';",
     'src/unstaged.ts': "import axios from 'axios';",
@@ -127,6 +144,66 @@ boundaries:
   assert.equal(result.valid, false);
   assert.equal(result.filesChecked.length, 1);
   assert.equal(result.filesChecked[0], 'src/staged.ts');
+});
+
+test('loadConfig rejects invalid config values', async () => {
+  const cwd = await fixture({
+    '.threadline/config.yaml': `version: "1.0"
+project:
+  framework: vite
+  src_path: /src
+  component_path: components
+  extensions:
+    - .ts
+dev:
+  run_command: npm run dev
+  port: not-a-number
+styling:
+  strategy: css-modules
+  enforce_scoping: true
+boundaries:
+  forbidden_imports: []
+  forbidden_paths: []
+  whitelisted_imports: []
+  whitelisted_components: []
+validation:
+  max_warnings: 0
+design_system:
+  library: none
+  import_path: ""
+  allow_new_primitives: false
+`,
+  });
+
+  await assert.rejects(() => loadConfig(cwd));
+});
+
+test('init validate and scan-handoffs work end to end in one fixture repo', async () => {
+  const cwd = await fixture({
+    'package.json': JSON.stringify({ dependencies: { next: '^15.0.0', tailwindcss: '^4.0.0' } }),
+    'next.config.js': 'module.exports = {}',
+    'src/components/ExportButton.tsx': `import { handoff } from '@threadline/runtime';
+
+export function ExportButton() {
+  return handoff({
+    id: 'export-data',
+    title: 'Export Data',
+    description: 'Trigger CSV export of the current table view',
+    fallback: () => null,
+  });
+}
+`,
+  });
+  await execFile('git', ['init'], { cwd });
+
+  const initResult = await initProject({ cwd });
+  await execFile('git', ['add', '.threadline/config.yaml', 'src/components/ExportButton.tsx'], { cwd });
+  const validateResult = await validateProject({ cwd, staged: true });
+  const scanResult = await scanHandoffs({ cwd, json: true });
+
+  assert.equal(initResult.hook.installed, true);
+  assert.equal(validateResult.valid, true);
+  assert.equal(scanResult.records.length, 1);
 });
 
 test('scan-handoffs returns tracker-ready records with source locations', async () => {
@@ -157,14 +234,6 @@ export function Settings() {
     column: 10,
     valid: true,
     errors: [],
-    trackerPayload: {
-      title: 'Handoff: Export Data',
-      description: 'Trigger CSV export of the current table view',
-      location: 'src/components/Settings.tsx:4',
-      labels: ['threadline', 'handoff'],
-      priority: 'high',
-      status: 'Backlog',
-    },
   });
 });
 

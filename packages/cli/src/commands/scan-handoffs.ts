@@ -18,14 +18,6 @@ export interface HandoffRecord {
   column: number;
   valid: boolean;
   errors: string[];
-  trackerPayload: {
-    title: string;
-    description: string;
-    location: string;
-    labels: string[];
-    priority: string;
-    status: string;
-  };
 }
 
 export interface ScanHandoffsResult {
@@ -38,7 +30,6 @@ export async function scanHandoffs(options: ScanHandoffsOptions): Promise<ScanHa
     extensions: config.project.extensions,
   })).map((file) => `${config.project.src_path.replace(/\/$/, '')}/${file}`);
   const records: HandoffRecord[] = [];
-  const status = config.handoff?.status_on_create ?? 'Backlog';
 
   for (const filePath of files) {
     const source = await readFile(join(options.cwd, filePath), 'utf8');
@@ -58,14 +49,6 @@ export async function scanHandoffs(options: ScanHandoffsOptions): Promise<ScanHa
         column: location.column,
         valid: errors.length === 0,
         errors,
-        trackerPayload: {
-          title: `Handoff: ${title}`,
-          description,
-          location: `${filePath}:${location.line}`,
-          labels: ['threadline', 'handoff'],
-          priority: handoff.properties.priority?.value ?? 'normal',
-          status,
-        },
       });
     }
   }

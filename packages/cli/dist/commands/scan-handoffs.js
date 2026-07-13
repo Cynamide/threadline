@@ -18,14 +18,6 @@ import { findFiles } from '../utils/fs.js';
                  
                  
                    
-                   
-                  
-                        
-                     
-                     
-                     
-                   
-    
  
 
                                      
@@ -38,7 +30,6 @@ export async function scanHandoffs(options                     )                
     extensions: config.project.extensions,
   })).map((file) => `${config.project.src_path.replace(/\/$/, '')}/${file}`);
   const records                  = [];
-  const status = config.handoff?.status_on_create ?? 'Backlog';
 
   for (const filePath of files) {
     const source = await readFile(join(options.cwd, filePath), 'utf8');
@@ -58,14 +49,6 @@ export async function scanHandoffs(options                     )                
         column: location.column,
         valid: errors.length === 0,
         errors,
-        trackerPayload: {
-          title: `Handoff: ${title}`,
-          description,
-          location: `${filePath}:${location.line}`,
-          labels: ['threadline', 'handoff'],
-          priority: handoff.properties.priority?.value ?? 'normal',
-          status,
-        },
       });
     }
   }
