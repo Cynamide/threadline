@@ -32,8 +32,8 @@ export function parseHandoffs(sourceCode, filePath) {
     if (!isIdentifierToken(token, CALLEE)) continue;
     if (tokens[index - 1]?.value === '.') continue;
 
-    const openParenIndex = index + 1;
-    if (tokens[openParenIndex]?.value !== '(') continue;
+    const openParenIndex = findCallOpenParenIndex(tokens, index + 1);
+    if (openParenIndex === -1) continue;
 
     const closeParenIndex = matchingTokenIndex(tokens, openParenIndex, '(', ')');
     if (closeParenIndex === -1) continue;
@@ -43,6 +43,18 @@ export function parseHandoffs(sourceCode, filePath) {
   }
 
   return handoffs;
+}
+
+function findCallOpenParenIndex(tokens, startIndex) {
+  let index = startIndex;
+
+  if (tokens[index]?.value === '<') {
+    const closeAngleIndex = matchingTokenIndex(tokens, index, '<', '>');
+    if (closeAngleIndex === -1) return -1;
+    index = closeAngleIndex + 1;
+  }
+
+  return tokens[index]?.value === '(' ? index : -1;
 }
 
 function parseHandoffCall(sourceCode, filePath, tokens, calleeIndex, openParenIndex, closeParenIndex) {

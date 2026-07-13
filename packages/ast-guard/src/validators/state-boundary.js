@@ -23,9 +23,12 @@ export function validateStateBoundaries(source, filePath, config = {}) {
   }
 
   const tokens = tokenize(source);
+  const whitelistedImports = new Set(config.boundaries?.whitelisted_imports ?? []);
   const violations = [];
 
   for (const rule of STATE_RULES) {
+    if (whitelistedImports.has(rule.sequence[0])) continue;
+
     for (let index = 0; index < tokens.length; index += 1) {
       if (matchesSequence(tokens, index, rule.sequence)) {
         const location = getLineColumn(source, tokens[index].start);

@@ -79,6 +79,23 @@ test('parseHandoffs treats bare identifiers as callable fallbacks', () => {
   assert.equal(handoff.fallback.callable, true);
 });
 
+test('parseHandoffs accepts generic handoff calls', () => {
+  const [handoff] = parseHandoffs(
+    [
+      'handoff<string>({',
+      "  id: 'typed-handoff',",
+      "  title: 'Typed Handoff',",
+      '  fallback: () => null,',
+      '});',
+    ].join('\n'),
+    'src/components/Typed.tsx',
+  );
+
+  assert.equal(handoff.id, 'typed-handoff');
+  assert.equal(handoff.title, 'Typed Handoff');
+  assert.equal(handoff.fallback.callable, true);
+});
+
 test('validateHandoffSyntax reports documented handoff codes and description error', () => {
   const [handoff] = parseHandoffs(
     [
@@ -166,6 +183,22 @@ test('validateStateBoundaries detects UI state violations including unsafe fallb
       { code: 'STATE001', line: 8, column: 21 },
     ],
   );
+});
+
+test('validateStateBoundaries honors whitelisted imports for matching state rules', () => {
+  const source = [
+    'export function SearchBox() {',
+    '  const query = useQuery();',
+    '  return query;',
+    '}',
+  ].join('\n');
+
+  const violations = validateStateBoundaries(source, 'src/components/SearchBox.tsx', {
+    project: { src_path: 'src', component_path: 'components' },
+    boundaries: { whitelisted_imports: ['useQuery'], whitelisted_components: [] },
+  });
+
+  assert.deepEqual(violations, []);
 });
 
 test('detectForbiddenImports reports configured import names unless whitelisted', () => {
