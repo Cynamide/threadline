@@ -1,4 +1,4 @@
-import { composeTemplateBundle } from '../../../skill-templates/src/index.js';
+import { composeTemplateBundle } from '../generated/skill-template-bundle.js';
 
 export function generateSkillMarkdown(): string {
   return composeTemplateBundle();

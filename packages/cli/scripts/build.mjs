@@ -1,6 +1,7 @@
 import { chmod, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { dirname, extname, join, relative } from 'node:path';
 import { stripTypeScriptTypes } from 'node:module';
+import { composeTemplateBundle } from '../../skill-templates/src/index.js';
 
 const root = new URL('..', import.meta.url);
 const srcRoot = new URL('src/', root);
@@ -16,6 +17,12 @@ for (const file of await listFiles(srcRoot)) {
   await mkdir(dirname(output), { recursive: true });
   await writeFile(output, stripped);
 }
+
+await mkdir(join(distRoot.pathname, 'generated'), { recursive: true });
+await writeFile(
+  join(distRoot.pathname, 'generated', 'skill-template-bundle.js'),
+  `export function composeTemplateBundle() {\n  return ${JSON.stringify(composeTemplateBundle())};\n}\n`,
+);
 
 await chmod(new URL('dist/index.js', root), 0o755);
 
