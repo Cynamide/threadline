@@ -1,4 +1,4 @@
-# @ui-copilot/runtime
+# @threadline/runtime
 
 The runtime package provides the `handoff()` API that marks work the agent should not implement directly.
 
@@ -29,7 +29,7 @@ interface HandoffOptions<T = void> {
 ## Example
 
 ```ts
-import { handoff } from '@ui-copilot/runtime';
+import { handoff } from '@threadline/runtime';
 
 function SettingsToolbar() {
   const handleExport = handoff({

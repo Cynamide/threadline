@@ -1,13 +1,13 @@
 # Publishing Specification
 
-UI Copilot is a workspace of independently published packages.
+Threadline is a workspace of independently published packages.
 
 ## Packages
 
-- `@ui-copilot/runtime`
-- `@ui-copilot/cli`
-- `@ui-copilot/ast-guard`
-- `@ui-copilot/skill-templates`
+- `@threadline/runtime`
+- `@threadline/cli`
+- `@threadline/ast-guard`
+- `@threadline/skill-templates`
 
 ## Versioning
 

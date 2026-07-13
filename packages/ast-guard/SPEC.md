@@ -1,4 +1,4 @@
-# @ui-copilot/ast-guard
+# @threadline/ast-guard
 
 The AST guard parses source files and reports violations before code is pushed.
 

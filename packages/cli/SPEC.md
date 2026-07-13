@@ -1,22 +1,22 @@
-# @ui-copilot/cli
+# @threadline/cli
 
 The CLI package sets up a repo, validates it, and scans source files for handoffs.
 
 ## Commands
 
-### `ui-copilot init`
+### `threadline init`
 
-Creates the repo-local configuration under `.ui-copilot/`, detects project conventions, and installs hooks.
+Creates the repo-local configuration under `.threadline/`, detects project conventions, and installs hooks.
 
-### `ui-copilot validate`
+### `threadline validate`
 
 Runs the AST guard against staged files or the full source tree and reports violations in text or JSON.
 
-### `ui-copilot scan-handoffs`
+### `threadline scan-handoffs`
 
 Extracts all `handoff()` calls and returns structured records for issue tracker export.
 
-### `ui-copilot install-hooks`
+### `threadline install-hooks`
 
 Writes or updates the local pre-push hook so validation runs before code leaves the machine.
 
@@ -28,10 +28,10 @@ Writes or updates the local pre-push hook so validation runs before code leaves 
 
 ## Generated files
 
-- `.ui-copilot/config.yaml`
-- `.ui-copilot/boundaries.md`
-- `.ui-copilot/design-system.md`
-- `.ui-copilot/skill.md`
+- `.threadline/config.yaml`
+- `.threadline/boundaries.md`
+- `.threadline/design-system.md`
+- `.threadline/skill.md`
 
 ## Config shape
 

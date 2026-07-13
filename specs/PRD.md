@@ -8,7 +8,7 @@ Design changes move slowly when the person who sees the UI change is not the per
 
 ## Product shape
 
-UI Copilot is a local assistant that works inside a React codebase and keeps the agent's scope narrow:
+Threadline is a local assistant that works inside a React codebase and keeps the agent's scope narrow:
 
 - it can reshape UI, local state, and styling
 - it can plan multi-file work before editing

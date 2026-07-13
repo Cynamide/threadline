@@ -1,6 +1,6 @@
 # Config Schema Specification
 
-This file defines the shape of `.ui-copilot/config.yaml`, the repo-local configuration written by `ui-copilot init`.
+This file defines the shape of `.threadline/config.yaml`, the repo-local configuration written by `threadline init`.
 
 ## Goals
 

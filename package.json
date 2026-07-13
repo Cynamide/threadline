@@ -1,8 +1,8 @@
 {
-  "name": "ui-copilot",
+  "name": "threadline",
   "version": "1.0.0",
   "private": true,
-  "description": "AI-Powered Design-to-React Implementation & Handoff Tool",
+  "description": "Threadline is a local monorepo for design-to-React implementation with guardrails.",
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
@@ -24,17 +24,16 @@
     "node": ">=18.0.0"
   },
   "keywords": [
-    "ui-copilot",
+    "threadline",
     "react",
     "ai",
     "design",
     "handoff",
-    "cursor",
-    "copilot"
+    "cursor"
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-org/ui-copilot"
+    "url": "https://github.com/Cynamide/threadline"
   },
   "author": "Your Organization",
   "license": "MIT"

@@ -1,6 +1,6 @@
-# UI Copilot
+# Threadline
 
-UI Copilot is a local monorepo for turning UI design requests into React changes with guardrails. It keeps the fast, visual parts of a change in the agent's hands and pushes architectural work into explicit handoffs.
+Threadline is a local monorepo for turning UI design requests into React changes with guardrails. It keeps the fast, visual parts of a change in the agent's hands and pushes architectural work into explicit handoffs.
 
 ## What lives here
 
@@ -11,7 +11,7 @@ UI Copilot is a local monorepo for turning UI design requests into React changes
 
 ## How the system is meant to behave
 
-1. A project is initialized with `ui-copilot init`.
+1. A project is initialized with `threadline init`.
 2. The agent reads the repo configuration, glossary, and skill files.
 3. The agent makes UI and local-state edits directly in the app.
 4. Anything architectural becomes a `handoff()` call with stable metadata.

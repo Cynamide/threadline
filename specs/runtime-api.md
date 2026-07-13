@@ -1,23 +1,23 @@
 # Runtime API Specification
 
-**Detailed API reference for `@ui-copilot/runtime`**
+**Detailed API reference for `@threadline/runtime`**
 
 ---
 
 ## Overview
 
-The `@ui-copilot/runtime` package provides a single function `handoff()` that allows AI agents to stub out architectural logic while providing safe fallback behavior.
+The `@threadline/runtime` package provides a single function `handoff()` that allows AI agents to stub out architectural logic while providing safe fallback behavior.
 
 ---
 
 ## Installation
 
 ```bash
-npm install @ui-copilot/runtime
+npm install @threadline/runtime
 # or
-pnpm add @ui-copilot/runtime
+pnpm add @threadline/runtime
 # or
-yarn add @ui-copilot/runtime
+yarn add @threadline/runtime
 ```
 
 ---
@@ -96,7 +96,7 @@ The return value of the `fallback` function, or `void` if fallback returns nothi
 ### Basic Usage
 
 ```typescript
-import { handoff } from '@ui-copilot/runtime';
+import { handoff } from '@threadline/runtime';
 
 function MyComponent() {
   const handleClick = handoff({
@@ -147,7 +147,7 @@ await fetchData();
 ### Event Handler
 
 ```typescript
-import { handoff } from '@ui-copilot/runtime';
+import { handoff } from '@threadline/runtime';
 
 function DeleteButton({ itemId }: { itemId: string }) {
   const handleDelete = handoff({
@@ -274,7 +274,7 @@ handoff({
 });
 
 // Console output:
-// [UI Copilot] Handoff triggered: "Test Handoff"
+// [Threadline] Handoff triggered: "Test Handoff"
 // Description: Test description
 // ID: test
 // This should be implemented by an engineer.
@@ -332,7 +332,7 @@ handoff({
   title: 'Missing ID',
   fallback: () => {}
 });
-// Console: [UI Copilot] handoff() requires a stable "id" field
+// Console: [Threadline] handoff() requires a stable "id" field
 
 // Fallback throws (caught and logged)
 handoff({
@@ -349,7 +349,7 @@ handoff({
 
 ```typescript
 // Import types
-import type { HandoffOptions, ParsedHandoff, HandoffScanResult } from '@ui-copilot/runtime';
+import type { HandoffOptions, ParsedHandoff, HandoffScanResult } from '@threadline/runtime';
 
 // Use in your code
 const options: HandoffOptions = {
@@ -372,7 +372,7 @@ The runtime package is designed to be minimal:
 
 ## Version Compatibility
 
-| @ui-copilot/runtime | React | Node |
+| @threadline/runtime | React | Node |
 |---------------------|-------|------|
 | 1.x                 | 17+   | 16+  |
 

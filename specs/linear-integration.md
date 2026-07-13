@@ -1,6 +1,6 @@
 # Issue Tracker Integration
 
-UI Copilot exports handoff records into an issue tracker so the missing implementation can be picked up by an engineer or downstream agent.
+Threadline exports handoff records into an issue tracker so the missing implementation can be picked up by an engineer or downstream agent.
 
 ## Repository stance
 
@@ -28,7 +28,7 @@ The tracker adapter should be able to turn a handoff into an issue-like payload:
   "title": "Handoff: Export Data",
   "description": "Trigger CSV export of the current table view",
   "location": "src/components/Settings.tsx:42",
-  "labels": ["ui-copilot", "handoff"],
+  "labels": ["threadline", "handoff"],
   "priority": "high",
   "status": "Backlog"
 }

@@ -1,4 +1,4 @@
-# @ui-copilot/skill-templates
+# @threadline/skill-templates
 
 This package holds the Markdown instructions copied into a repo's agent-facing skill file.
 
