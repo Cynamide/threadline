@@ -335,6 +335,21 @@ test('styling validators enforce Tailwind and CSS modules strategies', () => {
   assert.deepEqual(cssModuleViolations.map(({ code }) => code), ['STYLE002']);
 });
 
+test('validateStylingScope ignores plain JavaScript className variables', () => {
+  const violations = validateStylingScope(
+    [
+      'const className = "px-4 my-custom-button";',
+      'export function Button() {',
+      '  return <button className="px-4">Save</button>;',
+      '}',
+    ].join('\n'),
+    'src/components/Button.tsx',
+    'tailwind',
+  );
+
+  assert.deepEqual(violations, []);
+});
+
 test('runValidation returns stable summary and forbidden path violations', () => {
   const source = [
     'export function ExportButton() {',
