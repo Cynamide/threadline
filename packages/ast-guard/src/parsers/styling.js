@@ -1,5 +1,5 @@
 import { getLineColumn, makeViolation } from '../location.js';
-import { parseSourceFile, walkAst } from './handoff.js';
+import { parseSourceFile, walkAst } from './ast.js';
 
 const TAILWIND_PREFIXES = new Set([
   'absolute',

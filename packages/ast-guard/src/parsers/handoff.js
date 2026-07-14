@@ -1,6 +1,5 @@
-import { parse } from '@babel/parser';
-
 import { getLineColumn } from '../location.js';
+import { parseSourceFile, walkAst } from './ast.js';
 
 const CALLEE = 'handoff';
 const INVALID_CALLABLE_IDENTIFIERS = new Set([
@@ -21,37 +20,6 @@ const INVALID_CALLABLE_IDENTIFIERS = new Set([
   'yield',
   'await',
 ]);
-
-export function parseSourceFile(source) {
-  return parse(source, {
-    sourceType: 'module',
-    plugins: ['typescript', 'jsx'],
-    errorRecovery: true,
-    ranges: true,
-    tokens: true,
-  });
-}
-
-export function walkAst(node, visitor) {
-  visit(node, null, null);
-
-  function visit(current, parent, key) {
-    if (!current || typeof current !== 'object') return;
-    if (Array.isArray(current)) {
-      for (const item of current) visit(item, parent, key);
-      return;
-    }
-
-    if (typeof current.type === 'string') {
-      visitor(current, parent, key);
-    }
-
-    for (const [childKey, value] of Object.entries(current)) {
-      if (shouldSkipChild(childKey)) continue;
-      visit(value, current, childKey);
-    }
-  }
-}
 
 export function parseHandoffs(sourceCode, filePath) {
   const ast = parseSourceFile(sourceCode);
@@ -222,20 +190,4 @@ function unwrapExpression(node) {
 
 function decodeQuotedString(value) {
   return value;
-}
-
-function shouldSkipChild(key) {
-  return (
-    key === 'loc' ||
-    key === 'start' ||
-    key === 'end' ||
-    key === 'range' ||
-    key === 'tokens' ||
-    key === 'comments' ||
-    key === 'errors' ||
-    key === 'extra' ||
-    key === 'leadingComments' ||
-    key === 'innerComments' ||
-    key === 'trailingComments'
-  );
 }
