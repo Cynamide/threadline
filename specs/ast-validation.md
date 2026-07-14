@@ -1,6 +1,6 @@
 # AST Validation Specification
 
-This document defines the local validation rules enforced before a push.
+This document defines the local validation rules enforced before a push. The implementation uses a real AST parser so validation follows syntax structure instead of token heuristics.
 
 ## Rule groups
 
@@ -86,6 +86,6 @@ handoff({
 
 ## Notes
 
-- Prefer explicit AST rules over regex
+- Prefer explicit AST rules over regex or token scans
 - Keep the messages actionable
 - Do not hide boundary violations behind generic failures

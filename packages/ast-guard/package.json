@@ -1,7 +1,7 @@
 {
   "name": "@threadline/ast-guard",
   "version": "0.1.0",
-  "description": "Local AST-lite validation for Threadline handoffs and UI boundaries.",
+  "description": "Local AST-driven validation for Threadline handoffs and UI boundaries.",
   "type": "module",
   "main": "./src/index.js",
   "exports": {
@@ -11,6 +11,9 @@
     "test": "node --test",
     "build": "node --check src/index.js",
     "lint": "node --check src/index.js"
+  },
+  "dependencies": {
+    "@babel/parser": "^7.26.3"
   },
   "engines": {
     "node": ">=18.0.0"

@@ -1,6 +1,6 @@
 # @threadline/ast-guard
 
-`@threadline/ast-guard` is Threadline's local reviewer. It reads source files, finds places where the repo's rules are being broken, and returns structured violations before code is pushed.
+`@threadline/ast-guard` is Threadline's local reviewer. It reads source files with a real AST parser, finds places where the repo's rules are being broken, and returns structured violations before code is pushed.
 
 It exists so the team can keep UI code inside the agreed boundaries without relying on a manual code review to catch every issue.
 
@@ -66,7 +66,7 @@ Validation should return structured violations with:
 
 ## Notes
 
-- Prefer structured token-aware parsing over raw string matching
+- Prefer structured AST parsing over raw string matching
 - Keep messages actionable
 - Make the runner fast enough for local hook use
 - The output should be stable enough for CLI use, hooks, and tracker-aware automation

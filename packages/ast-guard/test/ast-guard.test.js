@@ -96,6 +96,22 @@ test('parseHandoffs accepts generic handoff calls', () => {
   assert.equal(handoff.fallback.callable, true);
 });
 
+test('parseHandoffs keeps working for generic handoff calls and nested expressions', () => {
+  const source = [
+    'const wrapped = handoff<string>({',
+    "  id: 'typed-handoff',",
+    "  title: 'Typed Handoff',",
+    "  fallback: makeFallback<string>('ready'),",
+    '});',
+  ].join('\n');
+
+  const [handoff] = parseHandoffs(source, 'src/components/Typed.tsx');
+
+  assert.equal(handoff.id, 'typed-handoff');
+  assert.equal(handoff.title, 'Typed Handoff');
+  assert.equal(handoff.fallback.callable, true);
+});
+
 test('validateHandoffSyntax reports documented handoff codes and description error', () => {
   const [handoff] = parseHandoffs(
     [

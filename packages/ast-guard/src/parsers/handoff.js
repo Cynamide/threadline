@@ -1,9 +1,8 @@
+import { parse } from '@babel/parser';
+
 import { getLineColumn } from '../location.js';
-import { isIdentifierToken, matchingTokenIndex, tokenize, tokensToSource } from '../tokenize.js';
 
 const CALLEE = 'handoff';
-const OPENERS = new Set(['(', '{', '[']);
-const CLOSERS = new Set([')', '}', ']']);
 const INVALID_CALLABLE_IDENTIFIERS = new Set([
   'false',
   'null',
@@ -23,59 +22,69 @@ const INVALID_CALLABLE_IDENTIFIERS = new Set([
   'await',
 ]);
 
+export function parseSourceFile(source) {
+  return parse(source, {
+    sourceType: 'module',
+    plugins: ['typescript', 'jsx'],
+    errorRecovery: true,
+    ranges: true,
+    tokens: true,
+  });
+}
+
+export function walkAst(node, visitor) {
+  visit(node, null, null);
+
+  function visit(current, parent, key) {
+    if (!current || typeof current !== 'object') return;
+    if (Array.isArray(current)) {
+      for (const item of current) visit(item, parent, key);
+      return;
+    }
+
+    if (typeof current.type === 'string') {
+      visitor(current, parent, key);
+    }
+
+    for (const [childKey, value] of Object.entries(current)) {
+      if (shouldSkipChild(childKey)) continue;
+      visit(value, current, childKey);
+    }
+  }
+}
+
 export function parseHandoffs(sourceCode, filePath) {
-  const tokens = tokenize(sourceCode);
+  const ast = parseSourceFile(sourceCode);
   const handoffs = [];
 
-  for (let index = 0; index < tokens.length; index += 1) {
-    const token = tokens[index];
-    if (!isIdentifierToken(token, CALLEE)) continue;
-    if (tokens[index - 1]?.value === '.') continue;
+  walkAst(ast, (node) => {
+    if (!isHandoffCall(node)) return;
+    handoffs.push(parseHandoffCall(sourceCode, filePath, node));
+  });
 
-    const openParenIndex = findCallOpenParenIndex(tokens, index + 1);
-    if (openParenIndex === -1) continue;
-
-    const closeParenIndex = matchingTokenIndex(tokens, openParenIndex, '(', ')');
-    if (closeParenIndex === -1) continue;
-
-    handoffs.push(parseHandoffCall(sourceCode, filePath, tokens, index, openParenIndex, closeParenIndex));
-    index = closeParenIndex;
-  }
-
-  return handoffs;
+  return handoffs.sort((left, right) => left.range[0] - right.range[0]);
 }
 
-function findCallOpenParenIndex(tokens, startIndex) {
-  let index = startIndex;
-
-  if (tokens[index]?.value === '<') {
-    const closeAngleIndex = matchingTokenIndex(tokens, index, '<', '>');
-    if (closeAngleIndex === -1) return -1;
-    index = closeAngleIndex + 1;
-  }
-
-  if (tokens[index]?.value === '(') {
-    return index;
-  }
-
-  return -1;
+function isHandoffCall(node) {
+  return (node.type === 'CallExpression' || node.type === 'OptionalCallExpression') && isHandoffCallee(node.callee);
 }
 
-function parseHandoffCall(sourceCode, filePath, tokens, calleeIndex, openParenIndex, closeParenIndex) {
-  const callLocation = getLineColumn(sourceCode, tokens[calleeIndex].start);
-  const argumentStartIndex = openParenIndex + 1;
-  const firstArgument = tokens[argumentStartIndex];
-  const objectForm = firstArgument?.value === '{';
-  const properties = objectForm
-    ? parseObjectProperties(sourceCode, tokens, argumentStartIndex, closeParenIndex)
-    : {};
+function isHandoffCallee(callee) {
+  return callee?.type === 'Identifier' && callee.name === CALLEE;
+}
+
+function parseHandoffCall(sourceCode, filePath, node) {
+  const callLocation = getLineColumn(sourceCode, node.callee?.start ?? node.start ?? 0);
+  const firstArgument = node.arguments[0];
+  const objectForm = firstArgument?.type === 'ObjectExpression';
+  const properties = objectForm ? parseObjectProperties(sourceCode, firstArgument) : {};
 
   return {
     filePath,
     line: callLocation.line,
     column: callLocation.column,
     objectForm,
-    range: [tokens[calleeIndex].start, tokens[closeParenIndex].end],
+    range: [node.start ?? 0, node.end ?? 0],
     properties,
     id: properties.id?.value,
     title: properties.title?.value,
@@ -83,9 +92,7 @@ function parseHandoffCall(sourceCode, filePath, tokens, calleeIndex, openParenIn
     fallback: properties.fallback
       ? {
           raw: properties.fallback.raw,
-          callable: isCallableExpression(
-            tokens.slice(properties.fallback.valueStartIndex, properties.fallback.valueEndIndex + 1),
-          ),
+          callable: isCallableExpression(properties.fallback.valueNode),
           line: properties.fallback.line,
           column: properties.fallback.column,
         }
@@ -93,180 +100,142 @@ function parseHandoffCall(sourceCode, filePath, tokens, calleeIndex, openParenIn
   };
 }
 
-function parseObjectProperties(sourceCode, tokens, openIndex, closeIndex) {
+function parseObjectProperties(sourceCode, objectExpression) {
   const properties = {};
-  const segments = splitTopLevelSegments(tokens, openIndex + 1, closeIndex - 1);
 
-  for (const [segmentStart, segmentEnd] of segments) {
-    const colonIndex = findTopLevelColon(tokens, segmentStart, segmentEnd);
-    if (colonIndex === -1) continue;
+  for (const property of objectExpression.properties) {
+    if (property.type !== 'ObjectProperty' && property.type !== 'ObjectMethod') continue;
+    if (property.type === 'ObjectProperty' && property.computed) continue;
 
-    const keyToken = tokens[segmentStart];
-    const valueStartIndex = findFirstSignificantToken(tokens, colonIndex + 1, segmentEnd);
-    if (valueStartIndex === -1) continue;
-
-    const key = normalizePropertyKey(keyToken);
+    const key = normalizePropertyKey(property.key);
     if (!key) continue;
 
-    const valueEndIndex = findLastSignificantToken(tokens, valueStartIndex, segmentEnd);
-    if (valueEndIndex === -1) continue;
-
-    const location = getLineColumn(sourceCode, tokens[valueStartIndex].start);
-    const raw = tokensToSource(tokens, sourceCode, valueStartIndex, valueEndIndex).trim();
+    const valueNode = property.type === 'ObjectMethod' ? property : property.value;
+    const location = getLineColumn(sourceCode, valueNode?.start ?? property.key?.start ?? property.start ?? 0);
+    const raw = sourceCode.slice(valueNode?.start ?? property.start ?? 0, valueNode?.end ?? property.end ?? 0).trim();
 
     properties[key] = {
       key,
       raw,
-      value: decodeLiteralValue(tokens[valueStartIndex], raw),
+      value: decodeLiteralValue(valueNode, raw),
       line: location.line,
       column: location.column,
-      valueStartIndex,
-      valueEndIndex,
+      valueStartIndex: valueNode?.start ?? property.start ?? 0,
+      valueEndIndex: valueNode?.end ?? property.end ?? 0,
+      valueNode,
     };
   }
 
   return properties;
 }
 
-function splitTopLevelSegments(tokens, startIndex, endIndex) {
-  const segments = [];
-  let segmentStart = startIndex;
-  let depth = 0;
-
-  for (let index = startIndex; index <= endIndex; index += 1) {
-    const token = tokens[index];
-    if (token.type === 'string' || token.type === 'template') continue;
-
-    if (OPENERS.has(token.value)) {
-      depth += 1;
-      continue;
-    }
-
-    if (CLOSERS.has(token.value)) {
-      depth -= 1;
-      continue;
-    }
-
-    if (token.value === ',' && depth === 0) {
-      if (segmentStart <= index - 1) segments.push([segmentStart, index - 1]);
-      segmentStart = index + 1;
-    }
-  }
-
-  if (segmentStart <= endIndex) segments.push([segmentStart, endIndex]);
-  return segments;
-}
-
-function findTopLevelColon(tokens, startIndex, endIndex) {
-  let depth = 0;
-
-  for (let index = startIndex; index <= endIndex; index += 1) {
-    const token = tokens[index];
-    if (token.type === 'string' || token.type === 'template') continue;
-
-    if (OPENERS.has(token.value)) {
-      depth += 1;
-      continue;
-    }
-
-    if (CLOSERS.has(token.value)) {
-      depth -= 1;
-      continue;
-    }
-
-    if (token.value === ':' && depth === 0) return index;
-  }
-
-  return -1;
-}
-
-function findFirstSignificantToken(tokens, startIndex, endIndex) {
-  for (let index = startIndex; index <= endIndex; index += 1) {
-    if (tokens[index].type !== 'eof') return index;
-  }
-  return -1;
-}
-
-function findLastSignificantToken(tokens, startIndex, endIndex) {
-  for (let index = endIndex; index >= startIndex; index -= 1) {
-    if (tokens[index].type !== 'eof') return index;
-  }
-  return -1;
-}
-
-function normalizePropertyKey(token) {
-  if (!token) return undefined;
-  if (token.type === 'identifier') return token.value;
-  if (token.type === 'string') return decodeQuotedString(token.value);
+function normalizePropertyKey(node) {
+  if (!node) return undefined;
+  if (node.type === 'Identifier') return node.name;
+  if (node.type === 'StringLiteral') return decodeQuotedString(node.value);
   return undefined;
 }
 
-function decodeLiteralValue(token, raw) {
-  if (token.type === 'string') return decodeQuotedString(token.value);
-  if (token.type === 'template') return undefined;
+function decodeLiteralValue(node, raw) {
+  if (!node) return undefined;
+  if (node.type === 'StringLiteral') return node.value;
+  if (node.type === 'NullLiteral') return undefined;
+  if (node.type === 'TemplateLiteral') return undefined;
   if (raw === 'null') return undefined;
   return undefined;
 }
 
-function decodeQuotedString(raw) {
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return raw.slice(1, -1);
-  }
-}
+function isCallableExpression(node) {
+  const expression = unwrapExpression(node);
+  if (!expression) return false;
 
-function isCallableExpression(tokens) {
-  if (tokens.length === 0) return false;
-  const first = tokens[0];
-  const second = tokens[1];
-  if ((first.type === 'identifier' && first.value === 'function') || (first.type === 'identifier' && first.value === 'async' && second?.value === 'function') || isArrowFunctionExpression(tokens)) {
+  if (expression.type === 'Identifier') {
+    return !INVALID_CALLABLE_IDENTIFIERS.has(expression.name);
+  }
+
+  if (expression.type === 'ArrowFunctionExpression' || expression.type === 'FunctionExpression') {
     return true;
   }
 
-  if (first.value === '(') {
-    let closeIndex = -1;
-    if (tokens[tokens.length - 1]?.value === ')') {
-      closeIndex = matchingTokenIndex(tokens, 0, '(', ')');
-    }
-    return closeIndex === tokens.length - 1 && isCallableExpression(tokens.slice(1, -1));
+  if (expression.type === 'ObjectMethod') {
+    return true;
   }
 
-  if (first.type !== 'identifier' || INVALID_CALLABLE_IDENTIFIERS.has(first.value)) return false;
-  for (let index = 1; index < tokens.length; index += 1) {
-    const token = tokens[index];
-    if (token.type === 'identifier') continue;
-    if (token.value === '.' || token.value === '[' || token.value === ']') continue;
-    return false;
+  if (expression.type === 'CallExpression' || expression.type === 'OptionalCallExpression') {
+    return true;
   }
-  return true;
-}
 
-function isArrowFunctionExpression(tokens) {
-  let depth = 0;
+  if (expression.type === 'MemberExpression' || expression.type === 'OptionalMemberExpression') {
+    return isCallableMemberExpression(expression);
+  }
 
-  for (let index = 0; index < tokens.length; index += 1) {
-    const token = tokens[index];
-    if (token.type === 'string' || token.type === 'template') continue;
-
-    if (OPENERS.has(token.value)) {
-      depth += 1;
-      continue;
-    }
-
-    if (CLOSERS.has(token.value)) {
-      depth -= 1;
-      continue;
-    }
-
-    if (depth === 0 && (token.value === '?' || token.value === ':')) {
-      return false;
-    }
-
-    if (depth === 0 && token.value === '=>') {
-      return true;
-    }
+  if (expression.type === 'ChainExpression') {
+    return isCallableExpression(expression.expression);
   }
 
   return false;
+}
+
+function isCallableMemberExpression(node) {
+  return isCallableReference(node.object) && isCallableReference(node.property);
+}
+
+function isCallableReference(node) {
+  const expression = unwrapExpression(node);
+  if (!expression) return false;
+
+  if (expression.type === 'Identifier') {
+    return !INVALID_CALLABLE_IDENTIFIERS.has(expression.name);
+  }
+
+  if (expression.type === 'MemberExpression' || expression.type === 'OptionalMemberExpression') {
+    return isCallableMemberExpression(expression);
+  }
+
+  if (expression.type === 'ThisExpression') {
+    return true;
+  }
+
+  return false;
+}
+
+function unwrapExpression(node) {
+  let current = node;
+
+  while (current && typeof current === 'object') {
+    if (
+      current.type === 'ParenthesizedExpression' ||
+      current.type === 'TSAsExpression' ||
+      current.type === 'TSTypeAssertion' ||
+      current.type === 'TSNonNullExpression' ||
+      current.type === 'TypeCastExpression'
+    ) {
+      current = current.expression;
+      continue;
+    }
+
+    break;
+  }
+
+  return current;
+}
+
+function decodeQuotedString(value) {
+  return value;
+}
+
+function shouldSkipChild(key) {
+  return (
+    key === 'loc' ||
+    key === 'start' ||
+    key === 'end' ||
+    key === 'range' ||
+    key === 'tokens' ||
+    key === 'comments' ||
+    key === 'errors' ||
+    key === 'extra' ||
+    key === 'leadingComments' ||
+    key === 'innerComments' ||
+    key === 'trailingComments'
+  );
 }
