@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
+import { buildThreadlineConfig, parseThreadlineConfig } from '../dist/config/threadline-config.js';
 import { generateBoundariesMarkdown } from '../dist/generators/boundaries.js';
 import { generateConfigYaml } from '../dist/generators/config.js';
 import { generateDesignSystemMarkdown } from '../dist/generators/design-system.js';
@@ -19,13 +20,28 @@ test('generates schema-aligned config yaml with explicit knobs', () => {
     designSystemImportPath: '@/components/ui',
   });
 
-  assert.match(yaml, /^version: "1.0"/);
-  assert.match(yaml, /framework: nextjs/);
+  assert.match(yaml, /version: "1.0"/);
+  assert.match(yaml, /framework: "nextjs"/);
   assert.match(yaml, /branch_prefix: design\//);
   assert.match(yaml, /create_issues: true/);
   assert.match(yaml, /status_on_create: Backlog/);
   assert.match(yaml, /allow_new_primitives: false/);
   assert.match(yaml, /max_warnings: 0/);
+
+  assert.deepEqual(
+    parseThreadlineConfig(yaml),
+    buildThreadlineConfig({
+      framework: 'nextjs',
+      srcPath: 'src',
+      componentPath: 'components',
+      devCommand: 'npm run dev',
+      port: 3000,
+      styling: 'tailwind',
+      tailwindConfig: 'tailwind.config.ts',
+      designSystem: 'shadcn',
+      designSystemImportPath: '@/components/ui',
+    }),
+  );
 });
 
 test('generates markdown files for boundaries, design system, and agent skill', () => {

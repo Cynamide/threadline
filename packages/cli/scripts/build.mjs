@@ -12,15 +12,25 @@ await rm(distRoot, { recursive: true, force: true });
 await ensureLinkedPackage(new URL('node_modules/@threadline/ast-guard', root), new URL('../ast-guard/', root));
 
 for (const file of await listFiles(srcRoot)) {
-  if (file.endsWith('.d.ts') || extname(file) !== '.ts') continue;
-  const source = await readFile(file, 'utf8');
-  const stripped = stripTypeScriptTypes(source)
-    .replace(/[ \t]+$/gm, '')
-    .replace(/^[ \t]+$/gm, '')
-    .replace(/\n{3,}/g, '\n\n');
-  const output = join(distRoot.pathname, relative(srcRoot.pathname, file)).replace(/\.ts$/, '.js');
-  await mkdir(dirname(output), { recursive: true });
-  await writeFile(output, stripped);
+  const extension = extname(file);
+  if (file.endsWith('.d.ts')) continue;
+  if (extension === '.ts') {
+    const source = await readFile(file, 'utf8');
+    const stripped = stripTypeScriptTypes(source)
+      .replace(/[ \t]+$/gm, '')
+      .replace(/^[ \t]+$/gm, '')
+      .replace(/\n{3,}/g, '\n\n');
+    const output = join(distRoot.pathname, relative(srcRoot.pathname, file)).replace(/\.ts$/, '.js');
+    await mkdir(dirname(output), { recursive: true });
+    await writeFile(output, stripped);
+    continue;
+  }
+
+  if (extension === '.yaml' || extension === '.yml') {
+    const output = join(distRoot.pathname, relative(srcRoot.pathname, file));
+    await mkdir(dirname(output), { recursive: true });
+    await writeFile(output, await readFile(file, 'utf8'));
+  }
 }
 
 await mkdir(join(distRoot.pathname, 'generated'), { recursive: true });

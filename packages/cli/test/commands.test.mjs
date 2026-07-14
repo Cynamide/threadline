@@ -56,7 +56,7 @@ test('init writes threadline config files and installs pre-push hook', async () 
   assert.equal(result.configPath, '.threadline/config.yaml');
   assert.equal(result.filesWritten.length, 4);
   assert.equal(result.hook.installed, true);
-  assert.match(await readFile(join(cwd, '.threadline/config.yaml'), 'utf8'), /framework: nextjs/);
+  assert.match(await readFile(join(cwd, '.threadline/config.yaml'), 'utf8'), /framework: "nextjs"/);
   assert.match(await readFile(join(cwd, '.threadline/skill.md'), 'utf8'), /# Base Skill/);
   assert.match(await readFile(join(cwd, '.git/hooks/pre-push'), 'utf8'), /threadline validate --staged/);
 });

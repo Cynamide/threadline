@@ -1,0 +1,74 @@
+# Threadline config template
+#
+# The CLI fills the detected values into this YAML for each repo.
+# Everything else is the stable default shape users can read and edit.
+
+version: "1.0"
+
+project:
+  framework: {{framework}}
+  src_path: {{srcPath}}
+  component_path: {{componentPath}}
+  extensions:
+    - .tsx
+    - .ts
+    - .jsx
+    - .js
+
+dev:
+  run_command: {{devCommand}}
+  port: {{port}}
+  startup_timeout: 10000
+
+styling:
+  strategy: {{styling}}
+  enforce_scoping: true
+  tailwind_config: {{tailwindConfig}}
+
+git:
+  branch_prefix: design/
+  commit_style: conventional
+  squash_merge: true
+  pr_title_format: "ui: {description}"
+
+handoff:
+  create_issues: true
+  status_on_create: Backlog
+  status_on_merge: Ready
+  default_assignee: null
+  team_id: null
+
+boundaries:
+  forbidden_imports:
+    - fetch
+    - axios
+    - useSWR
+    - useQuery
+    - useDispatch
+    - useSelector
+    - useNavigate
+    - localStorage
+    - sessionStorage
+  forbidden_paths:
+    - src/api/
+    - src/store/
+    - src/hooks/useAuth*
+    - src/services/
+  whitelisted_imports: []
+  whitelisted_components:
+    - src/providers/**
+    - src/layouts/**
+
+design_system:
+  library: {{designSystem}}
+  import_path: {{designSystemImportPath}}
+  allow_new_primitives: false
+  component_aliases:
+    Button: PrimaryButton
+    Input: TextInput
+
+validation:
+  pre_push: true
+  pre_commit: false
+  auto_fix: true
+  max_warnings: 0
