@@ -28,7 +28,8 @@ That means a developer or agent can ship the safe path immediately, while the de
 3. Use `handoff({ ... })` in UI code when a task needs a later implementation pass.
 4. Give the handoff a safe `fallback` so the app still works.
 5. Run `threadline validate` locally or through the pre-push hook to catch boundary issues before they leave the machine.
-6. Run `threadline scan-handoffs` when you want a structured list of outstanding handoffs for tracker export.
+6. Run `threadline scan-handoffs` when you want a structured list of outstanding handoffs.
+7. Run `threadline export-handoffs --tracker github` when you want tracker-shaped payloads for follow-up work.
 
 ## Code examples
 
@@ -54,7 +55,7 @@ threadline validate
 ### Export handoffs for follow-up work
 
 ```sh
-threadline scan-handoffs --json
+threadline export-handoffs --tracker github
 ```
 
 ## Typical workflow

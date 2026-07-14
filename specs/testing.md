@@ -4,6 +4,13 @@ This document describes the test shape for the whole monorepo.
 
 ## Test layers
 
+Run these package suites directly when you want to verify the shipped behavior:
+
+- `npm test --prefix packages/runtime`
+- `npm test --prefix packages/ast-guard`
+- `npm test --prefix packages/cli`
+- `npm test --prefix packages/skill-templates`
+
 ### Runtime
 
 The runtime package needs focused tests around:

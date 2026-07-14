@@ -20,7 +20,7 @@ Extracts all `handoff()` calls and returns canonical records with source locatio
 
 ### `threadline export-handoffs`
 
-Turns canonical handoff records into tracker-specific issue payloads through the adapter layer.
+Turns canonical handoff records into tracker-specific issue payloads through the adapter layer. Use `--tracker github` for GitHub-shaped payloads or `--tracker linear` for the Linear example adapter.
 
 ### `threadline install-hooks`
 
@@ -100,3 +100,4 @@ It bridges the gap between the ideas in the docs and the day-to-day workflow: se
 - validates staged files
 - scans handoffs with file and line metadata
 - exports handoffs through a tracker adapter boundary
+- routes `export-handoffs` through the requested tracker adapter
