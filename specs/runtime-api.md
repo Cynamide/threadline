@@ -364,58 +364,6 @@ The runtime package is designed to be minimal:
 
 ---
 
-## Version Compatibility
-
-| @threadline/runtime | React | Node |
-|---------------------|-------|------|
-| 1.x                 | 17+   | 16+  |
-
----
-
-## Migration Guide
-
-### From Comments to handoff()
-
-Before:
-```typescript
-// TODO: Implement API call
-const handleClick = () => {
-  console.log('not implemented');
-};
-```
-
-After:
-```typescript
-const handleClick = handoff({
-  id: 'handle-click',
-  title: 'Handle Click',
-  description: 'Implement API call',
-  fallback: () => console.log('not implemented')
-});
-```
-
-### From Placeholders to handoff()
-
-Before:
-```typescript
-const handleSubmit = async () => {
-  // TODO: Replace with actual implementation
-  alert('Form submission coming soon');
-};
-```
-
-After:
-```typescript
-const handleSubmit = handoff({
-  id: 'submit-form',
-  title: 'Submit Form',
-  description: 'POST form data to /api/submit',
-  fallback: () => alert('Form submission coming soon')
-});
-```
-
----
-
 ## FAQ
 
 ### Can I use variables for IDs?

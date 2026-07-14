@@ -1,6 +1,6 @@
 {
   "name": "@threadline/ast-guard",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Local AST-driven validation for Threadline handoffs and UI boundaries.",
   "type": "module",
   "main": "./src/index.js",

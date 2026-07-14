@@ -1,6 +1,6 @@
 {
   "name": "@threadline/cli",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Threadline CLI for repo setup, validation, handoff scanning, and local hooks.",
   "type": "module",
   "bin": {
