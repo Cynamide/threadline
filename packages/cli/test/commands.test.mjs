@@ -5,6 +5,7 @@ import { test } from 'node:test';
 import { tmpdir } from 'node:os';
 import { execFile as execFileCallback } from 'node:child_process';
 import { promisify } from 'node:util';
+import { fileURLToPath } from 'node:url';
 
 import { installHooks } from '../dist/commands/install-hooks.js';
 import { initProject } from '../dist/commands/init.js';
@@ -14,6 +15,7 @@ import { validateProject } from '../dist/commands/validate.js';
 import { loadConfig } from '../dist/utils/config.js';
 
 const execFile = promisify(execFileCallback);
+const cliEntry = fileURLToPath(new URL('../dist/index.js', import.meta.url));
 
 async function fixture(files = {}) {
   const root = await import('node:fs/promises').then((fs) =>
@@ -27,6 +29,19 @@ async function fixture(files = {}) {
     }),
   );
   return root;
+}
+
+async function runCli(args, cwd) {
+  try {
+    const { stdout, stderr } = await execFile('node', [cliEntry, ...args], { cwd });
+    return { code: 0, stdout, stderr };
+  } catch (error) {
+    return {
+      code: typeof error?.code === 'number' ? error.code : 1,
+      stdout: error?.stdout ?? '',
+      stderr: error?.stderr ?? '',
+    };
+  }
 }
 
 test('init writes threadline config files and installs pre-push hook', async () => {
@@ -397,6 +412,75 @@ export function Settings() {
     priority: 'high',
     status: 'Backlog',
   });
+});
+
+test('cli rejects missing or invalid tracker values before export-handoffs falls back', async () => {
+  const cwd = await fixture({
+    '.threadline/config.yaml': `version: "1.0"
+project:
+  framework: vite
+  src_path: src
+  component_path: components
+  extensions:
+    - .tsx
+dev:
+  run_command: npm run dev
+  port: 5173
+  startup_timeout: 10000
+styling:
+  strategy: css-modules
+  enforce_scoping: true
+  tailwind_config: ""
+git:
+  branch_prefix: design/
+  commit_style: conventional
+  squash_merge: true
+  pr_title_format: "ui: {description}"
+handoff:
+  create_issues: true
+  status_on_create: Backlog
+  status_on_merge: Ready
+  default_assignee: null
+  team_id: null
+boundaries:
+  forbidden_imports: []
+  forbidden_paths: []
+  whitelisted_imports: []
+  whitelisted_components: []
+validation:
+  pre_push: true
+  pre_commit: false
+  auto_fix: true
+  max_warnings: 0
+design_system:
+  library: none
+  import_path: ""
+  allow_new_primitives: false
+  component_aliases:
+    Button: PrimaryButton
+`,
+    'src/components/Settings.tsx': `import { handoff } from '@threadline/runtime';
+
+export function Settings() {
+  return handoff({
+    id: 'export-data',
+    title: 'Export Data',
+    description: 'Trigger CSV export of the current table view',
+    fallback: () => null,
+  });
+}
+`,
+  });
+
+  const missing = await runCli(['export-handoffs', '--tracker'], cwd);
+  assert.equal(missing.code, 1);
+  assert.match(missing.stderr, /Missing value for --tracker/);
+  assert.equal(missing.stdout, '');
+
+  const invalid = await runCli(['export-handoffs', '--tracker', 'jira'], cwd);
+  assert.equal(invalid.code, 1);
+  assert.match(invalid.stderr, /Invalid tracker "jira"/);
+  assert.equal(invalid.stdout, '');
 });
 
 test('scan-handoffs includes invalid handoff calls with errors', async () => {
