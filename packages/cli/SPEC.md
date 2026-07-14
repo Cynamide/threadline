@@ -1,6 +1,6 @@
 # @threadline/cli
 
-`@threadline/cli` is the repo-facing entry point for Threadline. It helps a project get set up, keeps the rules checked locally, and turns handoffs into a structured export.
+`@threadline/cli` is the repo-facing entry point for Threadline. It helps a project get set up, keeps the rules checked locally, and turns handoffs into portable tracker exports.
 
 If you are new to the tool, this is the package you touch first.
 
@@ -16,7 +16,11 @@ Runs the AST guard against staged files or the full source tree and reports viol
 
 ### `threadline scan-handoffs`
 
-Extracts all `handoff()` calls and returns structured records for issue tracker export.
+Extracts all `handoff()` calls and returns canonical records with source locations and validation state.
+
+### `threadline export-handoffs`
+
+Turns canonical handoff records into tracker-specific issue payloads through the adapter layer.
 
 ### `threadline install-hooks`
 
@@ -43,7 +47,7 @@ The generated config should keep the important knobs explicit:
 - dev server command and port
 - styling strategy and scoping rules
 - branch prefix and merge preference
-- handoff export settings
+- handoff export settings and tracker adapter defaults
 - boundary rules for forbidden imports and paths
 - design system library and import path
 
@@ -52,7 +56,7 @@ The generated config should keep the important knobs explicit:
 1. Detect the repo shape.
 2. Write the configuration files.
 3. Install the hook.
-4. Let the user validate and scan locally.
+4. Let the user validate, scan, and export handoffs locally.
 
 ## Why this package exists
 
@@ -64,8 +68,9 @@ It bridges the gap between the ideas in the docs and the day-to-day workflow: se
 
 1. Run `threadline init` in a fresh repo or one that has not been wired up yet.
 2. Run `threadline validate` during development or before a push.
-3. Run `threadline scan-handoffs` when you want the outstanding deferred work in a tracker-friendly format.
-4. Run `threadline install-hooks` if you want validation enforced automatically by git.
+3. Run `threadline scan-handoffs` when you want the outstanding deferred work as canonical records.
+4. Run `threadline export-handoffs --tracker github` when you want GitHub-shaped payloads, or `--tracker linear` for the Linear example adapter.
+5. Run `threadline install-hooks` if you want validation enforced automatically by git.
 
 ## Files to implement
 
@@ -73,7 +78,12 @@ It bridges the gap between the ideas in the docs and the day-to-day workflow: se
 - `src/commands/init.ts`
 - `src/commands/validate.ts`
 - `src/commands/scan-handoffs.ts`
+- `src/commands/export-handoffs.ts`
 - `src/commands/install-hooks.ts`
+- `src/trackers/types.ts`
+- `src/trackers/github.ts`
+- `src/trackers/linear.ts`
+- `src/trackers/index.ts`
 - `src/detectors/framework.ts`
 - `src/detectors/styling.ts`
 - `src/detectors/components.ts`
@@ -89,3 +99,4 @@ It bridges the gap between the ideas in the docs and the day-to-day workflow: se
 - generates valid YAML and Markdown
 - validates staged files
 - scans handoffs with file and line metadata
+- exports handoffs through a tracker adapter boundary

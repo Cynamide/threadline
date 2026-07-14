@@ -8,6 +8,7 @@ import { promisify } from 'node:util';
 
 import { installHooks } from '../dist/commands/install-hooks.js';
 import { initProject } from '../dist/commands/init.js';
+import { exportHandoffs } from '../dist/commands/export-handoffs.js';
 import { scanHandoffs } from '../dist/commands/scan-handoffs.js';
 import { validateProject } from '../dist/commands/validate.js';
 import { loadConfig } from '../dist/utils/config.js';
@@ -339,6 +340,62 @@ export function Settings() {
     column: 10,
     valid: true,
     errors: [],
+  });
+});
+
+test('export-handoffs converts canonical records into GitHub issue payloads', async () => {
+  const cwd = await fixture({
+    'src/components/Settings.tsx': `${'\n'.repeat(38)}import { handoff } from '@threadline/runtime';
+
+export function Settings() {
+  return handoff({
+    id: 'export-data',
+    title: 'Export Data',
+    description: 'Trigger CSV export of the current table view',
+    fallback: () => null,
+  });
+}
+`,
+  });
+
+  const result = await exportHandoffs({ cwd, tracker: 'github' });
+
+  assert.equal(result.tracker, 'github');
+  assert.deepEqual(result.payloads[0], {
+    title: 'Handoff: Export Data',
+    description: 'Trigger CSV export of the current table view',
+    location: 'src/components/Settings.tsx:42',
+    labels: ['threadline', 'handoff'],
+    priority: 'high',
+    status: 'Backlog',
+  });
+});
+
+test('export-handoffs converts canonical records into Linear payloads', async () => {
+  const cwd = await fixture({
+    'src/components/Settings.tsx': `${'\n'.repeat(38)}import { handoff } from '@threadline/runtime';
+
+export function Settings() {
+  return handoff({
+    id: 'export-data',
+    title: 'Export Data',
+    description: 'Trigger CSV export of the current table view',
+    fallback: () => null,
+  });
+}
+`,
+  });
+
+  const result = await exportHandoffs({ cwd, tracker: 'linear' });
+
+  assert.equal(result.tracker, 'linear');
+  assert.deepEqual(result.payloads[0], {
+    title: 'Handoff: Export Data',
+    description: 'Trigger CSV export of the current table view',
+    location: 'src/components/Settings.tsx:42',
+    labels: ['threadline', 'handoff'],
+    priority: 'high',
+    status: 'Backlog',
   });
 });
 

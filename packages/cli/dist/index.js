@@ -5,11 +5,13 @@ import { initProject, formatInitResult } from './commands/init.js';
 import { validateProject, formatValidateResult } from './commands/validate.js';
 import { scanHandoffs, formatScanHandoffsResult } from './commands/scan-handoffs.js';
 import { installHooks, formatInstallHooksResult } from './commands/install-hooks.js';
+import { exportHandoffs, formatExportHandoffsResult } from './commands/export-handoffs.js';
 
 export { initProject } from './commands/init.js';
 export { validateProject } from './commands/validate.js';
 export { scanHandoffs } from './commands/scan-handoffs.js';
 export { installHooks } from './commands/install-hooks.js';
+export { exportHandoffs } from './commands/export-handoffs.js';
 
 export async function run(argv           = process.argv.slice(2))                  {
   const args = parseArgs(argv);
@@ -34,6 +36,15 @@ export async function run(argv           = process.argv.slice(2))               
     if (args.command === 'scan-handoffs') {
       const result = await scanHandoffs({ cwd: args.cwd, json: args.json });
       process.stdout.write(formatScanHandoffsResult(result, args.json));
+      return 0;
+    }
+    if (args.command === 'export-handoffs') {
+      const result = await exportHandoffs({ cwd: args.cwd, tracker: args.tracker });
+      if (args.json) {
+        process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+      } else {
+        process.stdout.write(formatExportHandoffsResult(result));
+      }
       return 0;
     }
     if (args.command === 'install-hooks') {
@@ -62,6 +73,7 @@ function parseArgs(argv          )             {
   let cwd = process.cwd();
   let json = false;
   let staged = false;
+  let tracker                      = 'github';
 
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -72,21 +84,28 @@ function parseArgs(argv          )             {
       json = true;
     } else if (arg === '--staged') {
       staged = true;
+    } else if (arg === '--tracker') {
+      const next = argv[index + 1];
+      if (next === 'github' || next === 'linear') {
+        tracker = next;
+      }
+      index += 1;
     } else if (!command) {
       command = arg;
     }
   }
 
-  return { command, cwd, json, staged };
+  return { command, cwd, json, staged, tracker };
 }
 
 function help()         {
-  return `Usage: threadline <command> [--cwd path] [--json]
+  return `Usage: threadline <command> [--cwd path] [--json] [--tracker github|linear]
 
 Commands:
   init             Write .threadline config files and install hooks
   validate         Validate source files against Threadline boundaries
   scan-handoffs    Extract handoff() records for tracker export
+  export-handoffs  Shape canonical handoff records for a tracker
   install-hooks    Install the local pre-push validation hook
 `;
 }

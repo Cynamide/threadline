@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { parseHandoffs, validateHandoffSyntax } from '@threadline/ast-guard';
+import type { HandoffRecord } from '../trackers/types.js';
 import { loadConfig } from '../utils/config.js';
 import { findFiles } from '../utils/fs.js';
 
@@ -9,16 +10,7 @@ export interface ScanHandoffsOptions {
   json?: boolean;
 }
 
-export interface HandoffRecord {
-  id: string;
-  title: string;
-  description: string;
-  filePath: string;
-  line: number;
-  column: number;
-  valid: boolean;
-  errors: string[];
-}
+export type { HandoffRecord } from '../trackers/types.js';
 
 export interface ScanHandoffsResult {
   records: HandoffRecord[];
