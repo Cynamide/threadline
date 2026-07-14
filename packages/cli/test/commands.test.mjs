@@ -381,7 +381,7 @@ export function Settings() {
     description: 'Trigger CSV export of the current table view',
     location: 'src/components/Settings.tsx:42',
     labels: ['threadline', 'handoff'],
-    priority: 'high',
+    priority: 'medium',
     status: 'Backlog',
   });
 });
@@ -409,9 +409,25 @@ export function Settings() {
     description: 'Trigger CSV export of the current table view',
     location: 'src/components/Settings.tsx:42',
     labels: ['threadline', 'handoff'],
-    priority: 'high',
+    priority: 'medium',
     status: 'Backlog',
   });
+});
+
+test('export-handoffs marks invalid records as high priority', async () => {
+  const cwd = await fixture({
+    'src/components/Bad.tsx': `import { handoff } from '@threadline/runtime';
+
+export function Bad() {
+  return handoff('not-object-form');
+}
+`,
+  });
+
+  const result = await exportHandoffs({ cwd, tracker: 'github' });
+
+  assert.equal(result.payloads[0].priority, 'high');
+  assert.equal(result.payloads[0].status, 'Backlog');
 });
 
 test('cli rejects missing or invalid tracker values before export-handoffs falls back', async () => {

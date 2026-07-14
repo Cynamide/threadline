@@ -6,11 +6,11 @@ export { githubAdapter, linearAdapter };
 export type {
   ExportHandoffsOptions,
   ExportHandoffsResult,
-  HandoffRecord,
   TrackerAdapter,
   TrackerIssuePayload,
   TrackerName,
 } from './types.js';
+export type { HandoffRecord } from '../commands/scan-handoffs.js';
 
 export function resolveTrackerAdapter(name: TrackerName): TrackerAdapter {
   if (name === 'linear') {

@@ -14,8 +14,8 @@ export { installHooks } from './commands/install-hooks.js';
 export { exportHandoffs } from './commands/export-handoffs.js';
 
 export async function run(argv           = process.argv.slice(2))                  {
-  const args = parseArgs(argv);
   try {
+    const args = parseArgs(argv);
     if (args.command === 'init') {
       const result = await initProject({ cwd: args.cwd });
       if (args.json) {
@@ -86,8 +86,13 @@ function parseArgs(argv          )             {
       staged = true;
     } else if (arg === '--tracker') {
       const next = argv[index + 1];
+      if (next === undefined || next.startsWith('--')) {
+        throw new Error('Missing value for --tracker. Use github or linear.');
+      }
       if (next === 'github' || next === 'linear') {
         tracker = next;
+      } else {
+        throw new Error(`Invalid tracker "${next}". Use github or linear.`);
       }
       index += 1;
     } else if (!command) {

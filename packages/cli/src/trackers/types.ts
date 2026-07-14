@@ -1,15 +1,6 @@
-export type TrackerName = 'github' | 'linear';
+import type { HandoffRecord } from '../commands/scan-handoffs.js';
 
-export interface HandoffRecord {
-  id: string;
-  title: string;
-  description: string;
-  filePath: string;
-  line: number;
-  column: number;
-  valid: boolean;
-  errors: string[];
-}
+export type TrackerName = 'github' | 'linear';
 
 export interface TrackerIssuePayload {
   title: string;
