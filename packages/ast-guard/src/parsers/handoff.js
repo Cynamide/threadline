@@ -54,7 +54,11 @@ function findCallOpenParenIndex(tokens, startIndex) {
     index = closeAngleIndex + 1;
   }
 
-  return tokens[index]?.value === '(' ? index : -1;
+  if (tokens[index]?.value === '(') {
+    return index;
+  }
+
+  return -1;
 }
 
 function parseHandoffCall(sourceCode, filePath, tokens, calleeIndex, openParenIndex, closeParenIndex) {
@@ -221,7 +225,10 @@ function isCallableExpression(tokens) {
   }
 
   if (first.value === '(') {
-    const closeIndex = tokens[tokens.length - 1]?.value === ')' ? matchingTokenIndex(tokens, 0, '(', ')') : -1;
+    let closeIndex = -1;
+    if (tokens[tokens.length - 1]?.value === ')') {
+      closeIndex = matchingTokenIndex(tokens, 0, '(', ')');
+    }
     return closeIndex === tokens.length - 1 && isCallableExpression(tokens.slice(1, -1));
   }
 

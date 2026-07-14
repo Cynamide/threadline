@@ -98,7 +98,10 @@ export function findMatchingDelimiter(source, openIndex) {
       const expectedOpen = CLOSE_TO_OPEN.get(character);
       if (stack.at(-1) !== expectedOpen) return -1;
       stack.pop();
-      if (stack.length === 0) return character === close ? index : -1;
+      if (stack.length === 0) {
+        if (character === close) return index;
+        return -1;
+      }
     }
 
     if (previous === '$' && character === '{' && quote === '`') {

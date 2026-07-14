@@ -26,7 +26,10 @@ export function detectForbiddenImportsWithConfig(
 ) {
   const tokens = tokenize(source);
   const whitelist = new Set(whitelistedImports);
-  const configuredForbidden = forbiddenImports.length > 0 ? new Set(forbiddenImports) : null;
+  let configuredForbidden = null;
+  if (forbiddenImports.length > 0) {
+    configuredForbidden = new Set(forbiddenImports);
+  }
   const violations = [];
 
   for (let index = 0; index < tokens.length; index += 1) {
@@ -39,11 +42,7 @@ export function detectForbiddenImportsWithConfig(
       if (!moduleToken || !isStringToken(moduleToken)) continue;
       const moduleName = normalizeModuleName(moduleToken.value);
       if (whitelist.has(moduleName)) continue;
-      const code = configuredForbidden
-        ? configuredForbidden.has(moduleName)
-          ? FORBIDDEN_IMPORT_CODES.get(moduleName) ?? FALLBACK_FORBIDDEN_IMPORT_CODE
-          : null
-        : FORBIDDEN_IMPORT_CODES.get(moduleName);
+      const code = resolveImportCode(moduleName, configuredForbidden);
       if (!code) continue;
       const location = getLineColumn(source, moduleToken.start);
       violations.push(
@@ -107,6 +106,19 @@ export function detectForbiddenImportsWithConfig(
   }
 
   return violations;
+}
+
+function resolveImportCode(moduleName, configuredForbidden) {
+  if (configuredForbidden) {
+    if (!configuredForbidden.has(moduleName)) {
+      return null;
+    }
+  }
+
+  const code = FORBIDDEN_IMPORT_CODES.get(moduleName);
+  if (code) return code;
+  if (configuredForbidden) return FALLBACK_FORBIDDEN_IMPORT_CODE;
+  return null;
 }
 
 function findFromIndex(tokens, startIndex) {

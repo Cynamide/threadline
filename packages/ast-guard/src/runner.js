@@ -61,7 +61,10 @@ export function runValidation(options = {}) {
   const errorCount = violations.filter((violation) => violation.severity === 'error').length;
   const warningCount = violations.filter((violation) => violation.severity === 'warning').length;
   const maxWarnings = options.maxWarnings ?? config.validation?.max_warnings;
-  const warningsAllowed = typeof maxWarnings === 'number' ? warningCount <= maxWarnings : true;
+  let warningsAllowed = true;
+  if (typeof maxWarnings === 'number') {
+    warningsAllowed = warningCount <= maxWarnings;
+  }
 
   return {
     passed: errorCount === 0 && warningsAllowed,
@@ -76,7 +79,7 @@ export function runValidation(options = {}) {
 }
 
 function normalizeFiles(files) {
-  return files.map((file) => (typeof file === 'string' ? { filePath: file } : file));
+  return files.map((file) => normalizeFile(file));
 }
 
 function readSource(filePath) {
@@ -133,9 +136,23 @@ function mergeConfig(defaultConfig, config) {
   return {
     ...defaultConfig,
     ...config,
-    project: { ...defaultConfig.project, ...(config.project ?? {}) },
-    styling: { ...defaultConfig.styling, ...(config.styling ?? {}) },
-    boundaries: { ...defaultConfig.boundaries, ...(config.boundaries ?? {}) },
-    validation: { ...(defaultConfig.validation ?? {}), ...(config.validation ?? {}) },
+    project: mergeSection(defaultConfig.project, config.project),
+    styling: mergeSection(defaultConfig.styling, config.styling),
+    boundaries: mergeSection(defaultConfig.boundaries, config.boundaries),
+    validation: mergeSection(defaultConfig.validation ?? {}, config.validation),
+  };
+}
+
+function normalizeFile(file) {
+  if (typeof file === 'string') {
+    return { filePath: file };
+  }
+  return file;
+}
+
+function mergeSection(defaultSection, section) {
+  return {
+    ...defaultSection,
+    ...(section ?? {}),
   };
 }
