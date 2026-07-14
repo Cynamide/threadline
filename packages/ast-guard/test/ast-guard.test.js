@@ -64,6 +64,43 @@ test('parseHandoffs extracts multiple object-form handoffs with stable locations
   assert.equal(handoffs[1].fallback.callable, true);
 });
 
+test('parseHandoffs still finds object-form calls', () => {
+  const handoffs = parseHandoffs(
+    [
+      'export function Toolbar() {',
+      '  return handoff({',
+      "    id: 'save-draft',",
+      "    title: 'Save Draft',",
+      '    fallback: onSaveQueued,',
+      '  });',
+      '}',
+    ].join('\n'),
+    'src/components/Toolbar.tsx',
+  );
+
+  assert.equal(handoffs.length, 1);
+  assert.deepEqual(
+    {
+      objectForm: handoffs[0].objectForm,
+      id: handoffs[0].id,
+      title: handoffs[0].title,
+      fallbackCallable: handoffs[0].fallback?.callable,
+      line: handoffs[0].line,
+      column: handoffs[0].column,
+      filePath: handoffs[0].filePath,
+    },
+    {
+      objectForm: true,
+      id: 'save-draft',
+      title: 'Save Draft',
+      fallbackCallable: true,
+      line: 2,
+      column: 10,
+      filePath: 'src/components/Toolbar.tsx',
+    },
+  );
+});
+
 test('parseHandoffs treats bare identifiers as callable fallbacks', () => {
   const [handoff] = parseHandoffs(
     [
@@ -267,6 +304,26 @@ test('detectForbiddenImportsWithConfig reports forbidden dynamic imports', () =>
   );
 });
 
+test('detectForbiddenImportsWithConfig still reports the same violation shape', () => {
+  const violations = detectForbiddenImportsWithConfig(
+    "import axios from 'axios';",
+    'src/components/SearchBox.tsx',
+    [],
+    ['axios'],
+  );
+
+  assert.deepEqual(violations, [
+    {
+      code: 'STATE002',
+      severity: 'error',
+      filePath: 'src/components/SearchBox.tsx',
+      line: 1,
+      column: 19,
+      message: 'Move axios usage out of the UI component or add an explicit whitelist entry.',
+    },
+  ]);
+});
+
 test('detectForbiddenImportsWithConfig reports configured forbidden module paths', () => {
   const source = "import api from '@/services/api';";
   const violations = detectForbiddenImportsWithConfig(source, 'src/components/Loader.tsx', [], ['@/services/api']);
@@ -333,6 +390,25 @@ test('styling validators enforce Tailwind and CSS modules strategies', () => {
   assert.deepEqual(tailwindViolations.map(({ code }) => code), ['STYLE002']);
   assert.deepEqual(tailwindBraceViolations.map(({ code }) => code), ['STYLE002']);
   assert.deepEqual(cssModuleViolations.map(({ code }) => code), ['STYLE002']);
+});
+
+test('validateStylingScope still reports className violations', () => {
+  const violations = validateStylingScope(
+    '<button className="px-4 my-custom-button">Save</button>',
+    'src/components/Button.tsx',
+    'tailwind',
+  );
+
+  assert.deepEqual(violations, [
+    {
+      code: 'STYLE002',
+      severity: 'error',
+      filePath: 'src/components/Button.tsx',
+      line: 1,
+      column: 9,
+      message: 'Replace "my-custom-button" with configured Tailwind utility classes.',
+    },
+  ]);
 });
 
 test('validateStylingScope ignores plain JavaScript className variables', () => {
