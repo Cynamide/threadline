@@ -9,7 +9,7 @@ Use it when a screen or interaction needs a safe local fallback now, but the rea
 `handoff()` accepts a single object argument and returns a callable wrapper that runs the fallback when invoked.
 
 ```ts
-function handoff<T = void>(options: HandoffOptions<T>): () => T | Promise<T> | void;
+function handoff<T = void>(options: HandoffOptions<T>): () => T | Promise<T | void> | void;
 
 interface HandoffOptions<T = void> {
   id: string;
@@ -28,7 +28,10 @@ interface HandoffOptions<T = void> {
 - the returned wrapper is what gets attached to events or callbacks
 - async fallbacks are allowed
 - development mode warns when the wrapper is invoked
+- fallback failures do not throw through the wrapper; they resolve to `undefined` instead
+- development mode logs fallback failures with `console.error`
 - production mode stays quiet and still runs the fallback
+- production mode also suppresses fallback failure logging while still neutralizing the failure
 
 ## Why this package exists
 
@@ -67,6 +70,7 @@ function SettingsToolbar() {
 - Avoid positional arguments; the object form is the only supported shape
 - Preserve a stable call shape so the AST parser can identify handoffs reliably
 - The fallback should be safe to run locally because it may execute in development and production
+- A successful fallback result is returned unchanged; only failures are softened to `undefined`
 
 ## Files to implement
 
@@ -83,3 +87,5 @@ function SettingsToolbar() {
 - supports async fallbacks
 - warns in development mode
 - stays quiet in production mode
+- logs and neutralizes sync fallback failures in development
+- logs and neutralizes async fallback failures in development

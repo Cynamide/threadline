@@ -99,9 +99,14 @@ describe('handoff()', () => {
     assert.deepEqual(warnings, []);
   });
 
-  it('lets synchronous fallback errors propagate', () => {
+  it('logs fallback failures in development and does not rethrow them', () => {
+    const errors: unknown[][] = [];
+
     process.env.NODE_ENV = 'development';
     console.warn = () => {};
+    console.error = (...args: unknown[]) => {
+      errors.push(args);
+    };
 
     const wrapped = handoff({
       id: 'sync-failure',
@@ -111,12 +116,19 @@ describe('handoff()', () => {
       },
     });
 
-    assert.throws(() => wrapped(), /boom/);
+    assert.equal(wrapped(), undefined);
+    assert.equal(errors.length, 1);
+    assert.match(String(errors[0]?.[0]), /fallback failed/i);
   });
 
-  it('lets async fallback rejections propagate', async () => {
+  it('swallows async fallback failures and reports them in development', async () => {
+    const errors: unknown[][] = [];
+
     process.env.NODE_ENV = 'development';
     console.warn = () => {};
+    console.error = (...args: unknown[]) => {
+      errors.push(args);
+    };
 
     const wrapped = handoff({
       id: 'async-failure',
@@ -126,8 +138,27 @@ describe('handoff()', () => {
       },
     });
 
-    await assert.rejects(async () => {
-      await wrapped();
+    await assert.doesNotReject(async () => {
+      assert.equal(await wrapped(), undefined);
     }, /async boom/);
+    assert.equal(errors.length, 1);
+  });
+
+  it('stays quiet in production when fallback failures happen', () => {
+    process.env.NODE_ENV = 'production';
+    console.warn = () => {};
+    console.error = () => {
+      throw new Error('should not be called');
+    };
+
+    const wrapped = handoff({
+      id: 'prod-failure',
+      title: 'Prod Failure',
+      fallback: () => {
+        throw new Error('boom');
+      },
+    });
+
+    assert.equal(wrapped(), undefined);
   });
 });

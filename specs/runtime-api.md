@@ -31,7 +31,7 @@ Creates a callable wrapper that can be used in place of real implementation.
 #### Signature
 
 ```typescript
-function handoff<T = void>(options: HandoffOptions<T>): () => T | Promise<T>;
+function handoff<T = void>(options: HandoffOptions<T>): () => T | Promise<T | void> | void;
 ```
 
 #### Parameters
@@ -69,7 +69,8 @@ interface HandoffOptions<T = void> {
   /**
    * Safe, non-breaking fallback behavior.
    * This function runs when the returned wrapper is invoked.
-   * Should never throw errors or break the UI.
+   * Successful return values are preserved.
+   * If it throws or rejects, the wrapper swallows the failure and returns undefined.
    * 
    * @example () => alert('Feature coming soon')
    */
@@ -135,6 +136,13 @@ const fetchData = handoff({
 // Usage
 await fetchData();
 ```
+
+### Failure Handling
+
+- In development, invoking a handoff wrapper still emits the existing warning before the fallback runs.
+- In development, if the fallback throws or rejects, the runtime logs a `console.error` with the handoff title, id, and original error.
+- In production, fallback failures are still neutralized to `undefined`, but no failure log is emitted.
+- Successful fallback return values are unchanged in every environment.
 
 ### Event Handler
 

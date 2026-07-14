@@ -48,6 +48,21 @@ function warnInvocation({ id, title, description }: HandoffOptions<unknown>): vo
   );
 }
 
+function reportFallbackFailure(
+  { id, title }: HandoffOptions<unknown>,
+  error: unknown,
+): void {
+  if (!isDevelopment()) {
+    return;
+  }
+
+  console.error(
+    `[Threadline] Handoff fallback failed: "${title}"`,
+    `ID: ${id}`,
+    error,
+  );
+}
+
 function isPromiseLike<T>(value: T | Promise<T>): value is Promise<T> {
   return typeof value === 'object' && value !== null && 'then' in value;
 }
@@ -60,12 +75,20 @@ export function handoff<T = void>(options: HandoffOptions<T>): HandoffWrapper<T>
       warnInvocation(options);
     }
 
-    const result = options.fallback();
+    try {
+      const result = options.fallback();
 
-    if (isPromiseLike(result)) {
+      if (isPromiseLike(result)) {
+        return result.catch((error) => {
+          reportFallbackFailure(options, error);
+          return undefined;
+        });
+      }
+
       return result;
+    } catch (error) {
+      reportFallbackFailure(options, error);
+      return undefined;
     }
-
-    return result;
   };
 }
