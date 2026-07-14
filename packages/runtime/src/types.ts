@@ -5,4 +5,4 @@ export interface HandoffOptions<T = void> {
   fallback: () => T | Promise<T>;
 }
 
-export type HandoffWrapper<T = void> = () => T | Promise<T> | void;
+export type HandoffWrapper<T = void> = () => T | Promise<T | void> | void;
