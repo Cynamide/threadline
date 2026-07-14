@@ -1,6 +1,5 @@
 import { join } from 'node:path';
 import { readFile } from 'node:fs/promises';
-                                                    
 
 const defaultConfig                   = {
   version: '1.0',
@@ -117,7 +116,7 @@ export async function loadConfig(cwd        )                            {
 }
 
 function readScalar(text        , section        , key        , fallback        , required = false)         {
-  const line = sectionLines(text, section).find((candidate) => candidate.startsWith(`  ${key}:`));
+  const line = readSectionEntry(text, section, key);
   if (!line) {
     if (required) throw new Error(`Invalid config: missing ${section}.${key}.`);
     return fallback;
@@ -128,16 +127,16 @@ function readScalar(text        , section        , key        , fallback        
 }
 
 function readList(text        , section        , key        , fallback          , required = false)           {
-  const lines = sectionLines(text, section);
-  const start = lines.findIndex((line) => line.startsWith(`  ${key}:`));
-  if (start === -1) {
+  const block = readSectionBlock(text, section, key);
+  if (block === null) {
     if (required) throw new Error(`Invalid config: missing ${section}.${key}.`);
     return fallback;
   }
-  const headerValue = lines[start].slice(lines[start].indexOf(':') + 1).trim();
+  const { header, lines } = block;
+  const headerValue = header.slice(header.indexOf(':') + 1).trim();
   if (headerValue === '[]') return [];
   const items           = [];
-  for (const line of lines.slice(start + 1)) {
+  for (const line of lines) {
     if (line.startsWith('  ') && !line.startsWith('    ')) break;
     const trimmed = line.trim();
     if (trimmed.startsWith('- ')) items.push(stripInlineComment(trimmed.slice(2)).replace(/^"|"$/g, ''));
@@ -169,7 +168,7 @@ function readEnum                  (text        , section        , key        , 
 }
 
 function readNullableScalar(text        , section        , key        , required = false)                {
-  const line = sectionLines(text, section).find((candidate) => candidate.startsWith(`  ${key}:`));
+  const line = readSectionEntry(text, section, key);
   if (!line) {
     if (required) throw new Error(`Invalid config: missing ${section}.${key}.`);
     return null;
@@ -197,14 +196,14 @@ function assertRelativePath(value        , label        )       {
 }
 
 function readMapping(text        , section        , key        , required = false)                         {
-  const lines = sectionLines(text, section);
-  const start = lines.findIndex((line) => line.startsWith(`  ${key}:`));
-  if (start === -1) {
+  const block = readSectionBlock(text, section, key);
+  if (block === null) {
     if (required) throw new Error(`Invalid config: missing ${section}.${key}.`);
     return {};
   }
+  const { lines } = block;
   const entries                         = {};
-  for (const line of lines.slice(start + 1)) {
+  for (const line of lines) {
     if (line.startsWith('  ') && !line.startsWith('    ')) break;
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith('#')) continue;
@@ -251,6 +250,21 @@ function stripInlineComment(value        )         {
   }
 
   return value.trimEnd();
+}
+
+function readSectionEntry(text        , section        , key        )                {
+  const lines = sectionLines(text, section);
+  return lines.find((candidate) => candidate.startsWith(`  ${key}:`)) ?? null;
+}
+
+function readSectionBlock(text        , section        , key        )                                             {
+  const lines = sectionLines(text, section);
+  const start = lines.findIndex((line) => line.startsWith(`  ${key}:`));
+  if (start === -1) return null;
+  return {
+    header: lines[start],
+    lines: lines.slice(start + 1),
+  };
 }
 
 function sectionLines(text        , section        )           {

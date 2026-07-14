@@ -9,21 +9,6 @@ import { generateSkillMarkdown } from '../generators/skill.js';
 import { writeTextFile } from '../utils/fs.js';
 import { installHooks,                         } from './install-hooks.js';
 
-                              
-              
- 
-
-                             
-                     
-                         
-                           
-             
-                      
-                    
-                         
-    
- 
-
 export async function initProject(options             )                      {
   const [framework, styling, designSystem] = await Promise.all([
     detectFramework(options.cwd),
@@ -69,7 +54,11 @@ export async function initProject(options             )                      {
 }
 
 export function formatInitResult(result            )         {
-  const hook = result.hook.installed ? 'installed pre-push hook' : 'skipped hook installation';
+  let hook = 'skipped hook installation';
+  if (result.hook.installed) {
+    hook = 'installed pre-push hook';
+  }
+
   return [
     `Threadline initialized ${result.configPath}.`,
     `Detected ${result.detected.framework}, ${result.detected.styling}, ${result.detected.designSystem}.`,

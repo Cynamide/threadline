@@ -38,8 +38,13 @@ export async function installHooks(options: InstallHooksOptions): Promise<Instal
 }
 
 export function formatInstallHooksResult(result: InstallHooksResult): string {
-  if (!result.installed) return 'Threadline hook not installed: .git directory was not found.';
-  return result.updated
-    ? `Threadline pre-push hook installed at ${result.hookPath}.`
-    : `Threadline pre-push hook already current at ${result.hookPath}.`;
+  if (!result.installed) {
+    return 'Threadline hook not installed: .git directory was not found.';
+  }
+
+  if (result.updated) {
+    return `Threadline pre-push hook installed at ${result.hookPath}.`;
+  }
+
+  return `Threadline pre-push hook already current at ${result.hookPath}.`;
 }

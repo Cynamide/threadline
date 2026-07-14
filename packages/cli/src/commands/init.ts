@@ -69,7 +69,11 @@ export async function initProject(options: InitOptions): Promise<InitResult> {
 }
 
 export function formatInitResult(result: InitResult): string {
-  const hook = result.hook.installed ? 'installed pre-push hook' : 'skipped hook installation';
+  let hook = 'skipped hook installation';
+  if (result.hook.installed) {
+    hook = 'installed pre-push hook';
+  }
+
   return [
     `Threadline initialized ${result.configPath}.`,
     `Detected ${result.detected.framework}, ${result.detected.styling}, ${result.detected.designSystem}.`,

@@ -11,25 +11,25 @@ export { validateProject } from './commands/validate.js';
 export { scanHandoffs } from './commands/scan-handoffs.js';
 export { installHooks } from './commands/install-hooks.js';
 
-                      
-                         
-              
-                
-                  
- 
-
 export async function run(argv           = process.argv.slice(2))                  {
   const args = parseArgs(argv);
   try {
     if (args.command === 'init') {
       const result = await initProject({ cwd: args.cwd });
-      process.stdout.write(args.json ? `${JSON.stringify(result, null, 2)}\n` : formatInitResult(result));
+      if (args.json) {
+        process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+      } else {
+        process.stdout.write(formatInitResult(result));
+      }
       return 0;
     }
     if (args.command === 'validate') {
       const result = await validateProject({ cwd: args.cwd, json: args.json, staged: args.staged });
       process.stdout.write(formatValidateResult(result, args.json));
-      return result.valid ? 0 : 1;
+      if (result.valid) {
+        return 0;
+      }
+      return 1;
     }
     if (args.command === 'scan-handoffs') {
       const result = await scanHandoffs({ cwd: args.cwd, json: args.json });
@@ -38,14 +38,21 @@ export async function run(argv           = process.argv.slice(2))               
     }
     if (args.command === 'install-hooks') {
       const result = await installHooks({ cwd: args.cwd });
-      process.stdout.write(args.json ? `${JSON.stringify(result, null, 2)}\n` : `${formatInstallHooksResult(result)}\n`);
-      return result.installed ? 0 : 1;
+      if (args.json) {
+        process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+      } else {
+        process.stdout.write(`${formatInstallHooksResult(result)}\n`);
+      }
+      if (result.installed) {
+        return 0;
+      }
+      return 1;
     }
 
     process.stderr.write(help());
     return 1;
   } catch (error) {
-    process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+    process.stderr.write(`${formatError(error)}\n`);
     return 1;
   }
 }
@@ -82,6 +89,13 @@ Commands:
   scan-handoffs    Extract handoff() records for tracker export
   install-hooks    Install the local pre-push validation hook
 `;
+}
+
+function formatError(error         )         {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return String(error);
 }
 
 const entrypoint = fileURLToPath(new URL(import.meta.url));

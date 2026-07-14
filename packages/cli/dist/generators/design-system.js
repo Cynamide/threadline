@@ -1,4 +1,4 @@
-                                                       
+
 
 export function generateDesignSystemMarkdown(input                                                      )         {
   return `# Threadline Design System

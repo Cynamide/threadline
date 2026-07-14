@@ -17,7 +17,12 @@ export async function readJson                             (path        )       
 
 export async function writeTextFile(path        , contents        , mode         )                {
   await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, contents, mode === undefined ? undefined : { mode });
+  if (mode === undefined) {
+    await writeFile(path, contents);
+    return;
+  }
+
+  await writeFile(path, contents, { mode });
 }
 
 export async function findFiles(

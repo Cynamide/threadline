@@ -4,28 +4,6 @@ import { runValidation as runAstValidation } from '@threadline/ast-guard';
 import { loadConfig } from '../utils/config.js';
 import { exists, findFiles } from '../utils/fs.js';
 import { stagedFiles } from '../utils/git.js';
-                                                    
-
-                                  
-              
-                 
-                   
- 
-
-                                      
-                   
-               
-                 
-               
-                  
- 
-
-                                 
-                 
-                         
-                                    
-                     
- 
 
 export async function validateProject(options                 )                          {
   const config = await loadConfig(options.cwd);
@@ -33,9 +11,7 @@ export async function validateProject(options                 )                 
   const fileEntries = await Promise.all(
     files.map(async (filePath) => ({
       filePath,
-      source: (await exists(join(options.cwd, filePath)))
-        ? await readFile(join(options.cwd, filePath), 'utf8')
-        : '',
+      source: await readSource(options.cwd, filePath),
     })),
   );
 
@@ -81,13 +57,27 @@ export function formatValidateResult(result                , json = false)      
 async function filesToValidate(cwd        , config                  , staged         )                    {
   const extensions = [...config.project.extensions, '.css', '.scss', '.sass'];
   const sourcePrefix = `${config.project.src_path.replace(/\/$/, '')}/`;
-  const candidates = staged ? await stagedFiles(cwd) : await findFiles(join(cwd, config.project.src_path), { extensions });
-  const normalized = staged
-    ? candidates
-    : candidates.map((file) => `${sourcePrefix}${file}`);
+  let candidates          ;
+  if (staged) {
+    candidates = await stagedFiles(cwd);
+  } else {
+    candidates = await findFiles(join(cwd, config.project.src_path), { extensions });
+  }
+
+  let normalized = candidates;
+  if (!staged) {
+    normalized = candidates.map((file) => `${sourcePrefix}${file}`);
+  }
 
   return normalized
     .filter((file) => file.startsWith(sourcePrefix))
     .filter((file) => extensions.some((extension) => file.endsWith(extension)))
     .sort();
+}
+
+async function readSource(cwd        , filePath        )                  {
+  if (await exists(join(cwd, filePath))) {
+    return readFile(join(cwd, filePath), 'utf8');
+  }
+  return '';
 }

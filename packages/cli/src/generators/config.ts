@@ -1,8 +1,8 @@
 import type { ConfigInput } from '../types.js';
 
 export function generateConfigYaml(input: ConfigInput): string {
-  const tailwindConfig = input.tailwindConfig ? input.tailwindConfig : 'null';
-  const importPath = input.designSystemImportPath ? `"${input.designSystemImportPath}"` : '""';
+  const tailwindConfig = renderNullableValue(input.tailwindConfig);
+  const importPath = renderQuotedValue(input.designSystemImportPath);
 
   return `version: "1.0"
 
@@ -74,4 +74,14 @@ validation:
   auto_fix: true
   max_warnings: 0
 `;
+}
+
+function renderNullableValue(value: string | null): string {
+  if (value === null) return 'null';
+  return value;
+}
+
+function renderQuotedValue(value: string): string {
+  if (value === '') return '""';
+  return `"${value}"`;
 }

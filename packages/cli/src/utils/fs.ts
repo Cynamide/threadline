@@ -17,7 +17,12 @@ export async function readJson<T = Record<string, unknown>>(path: string): Promi
 
 export async function writeTextFile(path: string, contents: string, mode?: number): Promise<void> {
   await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, contents, mode === undefined ? undefined : { mode });
+  if (mode === undefined) {
+    await writeFile(path, contents);
+    return;
+  }
+
+  await writeFile(path, contents, { mode });
 }
 
 export async function findFiles(

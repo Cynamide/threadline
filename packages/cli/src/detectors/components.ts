@@ -1,15 +1,11 @@
 import { join } from 'node:path';
 import type { DesignSystemDetection } from '../types.js';
-import { exists, readJson } from '../utils/fs.js';
-
-interface PackageJson {
-  dependencies?: Record<string, string>;
-  devDependencies?: Record<string, string>;
-}
+import { exists } from '../utils/fs.js';
+import { readPackageManifest } from '../utils/package-json.js';
 
 export async function detectDesignSystem(cwd: string): Promise<DesignSystemDetection> {
-  const pkg = await readJson<PackageJson>(join(cwd, 'package.json'));
-  const deps = { ...(pkg?.dependencies ?? {}), ...(pkg?.devDependencies ?? {}) };
+  const manifest = await readPackageManifest(cwd);
+  const deps = manifest.dependencies;
 
   if (await exists(join(cwd, 'src/components/ui'))) {
     return { library: 'shadcn', importPath: '@/components/ui' };

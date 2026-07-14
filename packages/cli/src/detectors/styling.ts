@@ -1,15 +1,11 @@
 import { join } from 'node:path';
 import type { StylingDetection } from '../types.js';
-import { exists, findFiles, readJson } from '../utils/fs.js';
-
-interface PackageJson {
-  dependencies?: Record<string, string>;
-  devDependencies?: Record<string, string>;
-}
+import { exists, findFiles } from '../utils/fs.js';
+import { readPackageManifest } from '../utils/package-json.js';
 
 export async function detectStyling(cwd: string): Promise<StylingDetection> {
-  const pkg = await readJson<PackageJson>(join(cwd, 'package.json'));
-  const deps = { ...(pkg?.dependencies ?? {}), ...(pkg?.devDependencies ?? {}) };
+  const manifest = await readPackageManifest(cwd);
+  const deps = manifest.dependencies;
   const reasons: string[] = [];
   const tailwindConfig = await firstTailwindConfig(cwd);
 
@@ -34,7 +30,11 @@ export async function detectStyling(cwd: string): Promise<StylingDetection> {
     return { strategy: 'css-modules', tailwindConfig: null, reasons };
   }
 
-  reasons.push(styleFiles.length > 0 ? 'found global CSS files' : 'no styling markers found');
+  if (styleFiles.length > 0) {
+    reasons.push('found global CSS files');
+  } else {
+    reasons.push('no styling markers found');
+  }
   return { strategy: 'plain-css', tailwindConfig: null, reasons };
 }
 

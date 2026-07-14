@@ -35,21 +35,7 @@ export async function scanHandoffs(options: ScanHandoffsOptions): Promise<ScanHa
     const source = await readFile(join(options.cwd, filePath), 'utf8');
     for (const handoff of parseHandoffs(source, filePath)) {
       const violations = validateHandoffSyntax(handoff);
-      const location = { line: handoff.line, column: handoff.column };
-      const title = handoff.title ?? 'Untitled handoff';
-      const description = handoff.description ?? '';
-      const id = handoff.id ?? '';
-      const errors = violations.map((violation) => `${violation.code}: ${violation.message}`);
-      records.push({
-        id,
-        title,
-        description,
-        filePath,
-        line: location.line,
-        column: location.column,
-        valid: errors.length === 0,
-        errors,
-      });
+      records.push(toHandoffRecord(handoff, filePath, violations));
     }
   }
 
@@ -64,4 +50,22 @@ export function formatScanHandoffsResult(result: ScanHandoffsResult, json = fals
     lines.push(`${record.filePath}:${record.line}:${record.column} ${record.title}`);
   }
   return `${lines.join('\n')}\n`;
+}
+
+function toHandoffRecord(
+  handoff: ReturnType<typeof parseHandoffs>[number],
+  filePath: string,
+  violations: ReturnType<typeof validateHandoffSyntax>,
+): HandoffRecord {
+  const errors = violations.map((violation) => `${violation.code}: ${violation.message}`);
+  return {
+    id: handoff.id ?? '',
+    title: handoff.title ?? 'Untitled handoff',
+    description: handoff.description ?? '',
+    filePath,
+    line: handoff.line,
+    column: handoff.column,
+    valid: errors.length === 0,
+    errors,
+  };
 }

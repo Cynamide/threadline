@@ -33,9 +33,7 @@ export async function validateProject(options: ValidateOptions): Promise<Validat
   const fileEntries = await Promise.all(
     files.map(async (filePath) => ({
       filePath,
-      source: (await exists(join(options.cwd, filePath)))
-        ? await readFile(join(options.cwd, filePath), 'utf8')
-        : '',
+      source: await readSource(options.cwd, filePath),
     })),
   );
 
@@ -81,13 +79,27 @@ export function formatValidateResult(result: ValidateResult, json = false): stri
 async function filesToValidate(cwd: string, config: ThreadlineConfig, staged: boolean): Promise<string[]> {
   const extensions = [...config.project.extensions, '.css', '.scss', '.sass'];
   const sourcePrefix = `${config.project.src_path.replace(/\/$/, '')}/`;
-  const candidates = staged ? await stagedFiles(cwd) : await findFiles(join(cwd, config.project.src_path), { extensions });
-  const normalized = staged
-    ? candidates
-    : candidates.map((file) => `${sourcePrefix}${file}`);
+  let candidates: string[];
+  if (staged) {
+    candidates = await stagedFiles(cwd);
+  } else {
+    candidates = await findFiles(join(cwd, config.project.src_path), { extensions });
+  }
+
+  let normalized = candidates;
+  if (!staged) {
+    normalized = candidates.map((file) => `${sourcePrefix}${file}`);
+  }
 
   return normalized
     .filter((file) => file.startsWith(sourcePrefix))
     .filter((file) => extensions.some((extension) => file.endsWith(extension)))
     .sort();
+}
+
+async function readSource(cwd: string, filePath: string): Promise<string> {
+  if (await exists(join(cwd, filePath))) {
+    return readFile(join(cwd, filePath), 'utf8');
+  }
+  return '';
 }

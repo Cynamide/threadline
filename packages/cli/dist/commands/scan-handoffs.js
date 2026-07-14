@@ -4,26 +4,6 @@ import { parseHandoffs, validateHandoffSyntax } from '@threadline/ast-guard';
 import { loadConfig } from '../utils/config.js';
 import { findFiles } from '../utils/fs.js';
 
-                                      
-              
-                 
- 
-
-                                
-             
-                
-                      
-                   
-               
-                 
-                 
-                   
- 
-
-                                     
-                           
- 
-
 export async function scanHandoffs(options                     )                              {
   const config = await loadConfig(options.cwd);
   const files = (await findFiles(join(options.cwd, config.project.src_path), {
@@ -35,21 +15,7 @@ export async function scanHandoffs(options                     )                
     const source = await readFile(join(options.cwd, filePath), 'utf8');
     for (const handoff of parseHandoffs(source, filePath)) {
       const violations = validateHandoffSyntax(handoff);
-      const location = { line: handoff.line, column: handoff.column };
-      const title = handoff.title ?? 'Untitled handoff';
-      const description = handoff.description ?? '';
-      const id = handoff.id ?? '';
-      const errors = violations.map((violation) => `${violation.code}: ${violation.message}`);
-      records.push({
-        id,
-        title,
-        description,
-        filePath,
-        line: location.line,
-        column: location.column,
-        valid: errors.length === 0,
-        errors,
-      });
+      records.push(toHandoffRecord(handoff, filePath, violations));
     }
   }
 
@@ -64,4 +30,22 @@ export function formatScanHandoffsResult(result                    , json = fals
     lines.push(`${record.filePath}:${record.line}:${record.column} ${record.title}`);
   }
   return `${lines.join('\n')}\n`;
+}
+
+function toHandoffRecord(
+  handoff                                          ,
+  filePath        ,
+  violations                                          ,
+)                {
+  const errors = violations.map((violation) => `${violation.code}: ${violation.message}`);
+  return {
+    id: handoff.id ?? '',
+    title: handoff.title ?? 'Untitled handoff',
+    description: handoff.description ?? '',
+    filePath,
+    line: handoff.line,
+    column: handoff.column,
+    valid: errors.length === 0,
+    errors,
+  };
 }

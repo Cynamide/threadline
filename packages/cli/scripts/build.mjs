@@ -14,7 +14,10 @@ await ensureLinkedPackage(new URL('node_modules/@threadline/ast-guard', root), n
 for (const file of await listFiles(srcRoot)) {
   if (file.endsWith('.d.ts') || extname(file) !== '.ts') continue;
   const source = await readFile(file, 'utf8');
-  const stripped = stripTypeScriptTypes(source);
+  const stripped = stripTypeScriptTypes(source)
+    .replace(/[ \t]+$/gm, '')
+    .replace(/^[ \t]+$/gm, '')
+    .replace(/\n{3,}/g, '\n\n');
   const output = join(distRoot.pathname, relative(srcRoot.pathname, file)).replace(/\.ts$/, '.js');
   await mkdir(dirname(output), { recursive: true });
   await writeFile(output, stripped);
