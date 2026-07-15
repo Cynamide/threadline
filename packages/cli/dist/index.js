@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
-import { initProject, formatInitResult } from './commands/init.js';
+
+import { initProject } from './commands/init.js';
 import { validateProject, formatValidateResult } from './commands/validate.js';
 import { scanHandoffs, formatScanHandoffsResult } from './commands/scan-handoffs.js';
 import { installHooks, formatInstallHooksResult } from './commands/install-hooks.js';
@@ -13,15 +14,35 @@ export { scanHandoffs } from './commands/scan-handoffs.js';
 export { installHooks } from './commands/install-hooks.js';
 export { exportHandoffs } from './commands/export-handoffs.js';
 
+const frameworkValues = ['nextjs', 'vite', 'cra', 'remix', 'custom']         ;
+const stylingValues = ['tailwind', 'styled-components', 'emotion', 'css-modules', 'plain-css']         ;
+const designSystemValues = ['shadcn', 'mui', 'antd', 'radix', 'custom', 'none']         ;
+
 export async function run(argv           = process.argv.slice(2))                  {
   try {
     const args = parseArgs(argv);
+    if (args.help || !args.command) {
+      process.stdout.write(help());
+      return args.help ? 0 : 1;
+    }
     if (args.command === 'init') {
-      const result = await initProject({ cwd: args.cwd });
+      const result = await initProject({
+        cwd: args.cwd,
+        preview: args.preview,
+        overrides: {
+          framework: args.framework,
+          styling: args.styling,
+          designSystem: args.designSystem,
+          srcPath: args.srcPath,
+          componentPath: args.componentPath,
+          devCommand: args.devCommand,
+          port: args.port,
+        },
+      });
       if (args.json) {
         process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
       } else {
-        process.stdout.write(formatInitResult(result));
+        process.stdout.write(`${result.summary}\n`);
       }
       return 0;
     }
@@ -72,45 +93,110 @@ function parseArgs(argv          )             {
   let command                = null;
   let cwd = process.cwd();
   let json = false;
+  let help = false;
   let staged = false;
+  let preview = false;
   let tracker                      = 'github';
+  let framework                       ;
+  let styling                             ;
+  let designSystem                                 ;
+  let srcPath                    ;
+  let componentPath                    ;
+  let devCommand                    ;
+  let port                    ;
 
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
-    if (arg === '--cwd') {
-      cwd = argv[index + 1] ?? cwd;
+    if (arg === '--help' || arg === '-h') {
+      help = true;
+    } else if (arg === '--cwd') {
+      const next = argv[index + 1];
+      if (next === undefined || next.startsWith('-')) {
+        throw new Error('Missing value for --cwd. Provide a directory path.');
+      }
+      cwd = next;
+      index += 1;
+    } else if (arg === '--framework') {
+      framework = parseEnumValue(arg, readValue(argv, index, '--framework'), frameworkValues);
+      index += 1;
+    } else if (arg === '--styling') {
+      styling = parseEnumValue(arg, readValue(argv, index, '--styling'), stylingValues);
+      index += 1;
+    } else if (arg === '--design-system') {
+      designSystem = parseEnumValue(arg, readValue(argv, index, '--design-system'), designSystemValues);
+      index += 1;
+    } else if (arg === '--src-path') {
+      srcPath = readValue(argv, index, '--src-path');
+      index += 1;
+    } else if (arg === '--component-path') {
+      componentPath = readValue(argv, index, '--component-path');
+      index += 1;
+    } else if (arg === '--dev-command') {
+      devCommand = readValue(argv, index, '--dev-command');
+      index += 1;
+    } else if (arg === '--port') {
+      port = parsePort(readValue(argv, index, '--port'));
       index += 1;
     } else if (arg === '--json') {
       json = true;
     } else if (arg === '--staged') {
       staged = true;
+    } else if (arg === '--preview') {
+      preview = true;
     } else if (arg === '--tracker') {
-      const next = argv[index + 1];
-      if (next === undefined || next.startsWith('--')) {
-        throw new Error('Missing value for --tracker. Use github or linear.');
-      }
+      const next = readValue(argv, index, '--tracker', 'Use github or linear.');
       if (next === 'github' || next === 'linear') {
         tracker = next;
       } else {
         throw new Error(`Invalid tracker "${next}". Use github or linear.`);
       }
       index += 1;
+    } else if (arg.startsWith('-')) {
+      throw new Error(`Unknown flag "${arg}". Use --help to see supported options.`);
     } else if (!command) {
       command = arg;
+    } else {
+      throw new Error(`Unexpected argument "${arg}". Use --help to see supported options.`);
     }
   }
 
-  return { command, cwd, json, staged, tracker };
+  return {
+    command,
+    cwd,
+    json,
+    help,
+    staged,
+    preview,
+    tracker,
+    framework,
+    styling,
+    designSystem,
+    srcPath,
+    componentPath,
+    devCommand,
+    port,
+  };
 }
 
 function help()         {
-  return `Usage: threadline <command> [--cwd path] [--json] [--tracker github|linear]
+  return `Usage: threadline <command> [options]
+
+Global flags:
+  -h, --help       Show this help message
+  --cwd <path>     Run against a different working directory
+  --json           Emit JSON output when supported
 
 Commands:
   init             Write .threadline config files and install hooks
+                   Add --preview to inspect the inferred config without writing files.
+                   Use --framework <value>, --styling <value>, --design-system <value>,
+                   --src-path <path>, --component-path <path>, --dev-command <value>,
+                   and --port <number> to override common init settings.
   validate         Validate source files against Threadline boundaries
+                   Add --staged to limit validation to staged files.
   scan-handoffs    Extract handoff() records for tracker export
   export-handoffs  Shape canonical handoff records for a tracker
+                   Use --tracker github|linear to choose the adapter.
   install-hooks    Install the local pre-push validation hook
 `;
 }
@@ -120,6 +206,30 @@ function formatError(error         )         {
     return error.message;
   }
   return String(error);
+}
+
+function readValue(argv          , index        , flag        , hint         )         {
+  const next = argv[index + 1];
+  if (next === undefined || next.startsWith('-')) {
+    const suffix = hint ? ` ${hint}` : '';
+    throw new Error(`Missing value for ${flag}.${suffix}`);
+  }
+  return next;
+}
+
+function parseEnumValue                                   (flag        , value        , allowed   )            {
+  if (allowed.includes(value)) {
+    return value;
+  }
+  throw new Error(`Invalid value for ${flag}: "${value}". Use ${allowed.join(', ')}.`);
+}
+
+function parsePort(value        )         {
+  const port = Number(value);
+  if (!Number.isInteger(port) || port <= 0) {
+    throw new Error(`Invalid value for --port: "${value}". Use a positive integer.`);
+  }
+  return port;
 }
 
 const entrypoint = fileURLToPath(new URL(import.meta.url));

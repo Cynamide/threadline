@@ -61,6 +61,59 @@ test('init writes threadline config files and installs pre-push hook', async () 
   assert.match(await readFile(join(cwd, '.git/hooks/pre-push'), 'utf8'), /threadline validate --staged/);
 });
 
+test('threadline init preview prints the resolved summary without writing files', async () => {
+  const cwd = await fixture({
+    'package.json': JSON.stringify({ dependencies: { next: '^15.0.0', tailwindcss: '^4.0.0' } }),
+    'next.config.js': 'module.exports = {}',
+    'src/components/ui/Button.tsx': 'export function Button() { return null; }',
+  });
+  await execFile('git', ['init'], { cwd });
+
+  const result = await runCli(['init', '--preview'], cwd);
+
+  assert.equal(result.code, 0);
+  assert.match(result.stdout, /Detected nextjs, tailwind, shadcn/);
+  assert.match(result.stdout, /Preview only/);
+  await assert.rejects(stat(join(cwd, '.threadline/config.yaml')));
+  assert.equal(result.stderr, '');
+});
+
+test('threadline init accepts explicit overrides for common knobs', async () => {
+  const cwd = await fixture({
+    'package.json': JSON.stringify({ dependencies: { next: '^15.0.0' } }),
+    'next.config.js': 'module.exports = {}',
+  });
+  await execFile('git', ['init'], { cwd });
+
+  const result = await runCli(
+    [
+      'init',
+      '--framework',
+      'vite',
+      '--styling',
+      'css-modules',
+      '--design-system',
+      'none',
+      '--src-path',
+      'app',
+      '--component-path',
+      'components',
+      '--dev-command',
+      'pnpm dev',
+      '--port',
+      '4173',
+    ],
+    cwd,
+  );
+
+  assert.equal(result.code, 0);
+  assert.match(
+    result.stdout,
+    /Applied overrides: framework, styling, designSystem, srcPath, componentPath, devCommand, port/,
+  );
+  assert.match(await readFile(join(cwd, '.threadline/config.yaml'), 'utf8'), /framework: "vite"/);
+});
+
 test('validate reports forbidden imports, paths, and browser storage access as json', async () => {
   const cwd = await fixture({
     '.threadline/config.yaml': `version: "1.0"
@@ -507,6 +560,9 @@ test('cli shows help for --help and -h and surfaces staged validation', async ()
     assert.equal(result.code, 0);
     assert.match(result.stdout, /Usage: threadline <command> \[options\]/);
     assert.match(result.stdout, /--staged/);
+    assert.match(result.stdout, /--preview/);
+    assert.match(result.stdout, /--framework <value>/);
+    assert.match(result.stdout, /--component-path <path>/);
     assert.equal(result.stderr, '');
   }
 });

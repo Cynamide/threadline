@@ -5,11 +5,12 @@ import { generateDesignSystemMarkdown } from '../generators/design-system.js';
 import { generateSkillMarkdown } from '../generators/skill.js';
 import type { InitOverrides } from '../types.js';
 import { writeTextFile } from '../utils/fs.js';
-import { resolveInitSettings } from './init-resolution.js';
+import { formatInitSummary, resolveInitSettings } from './init-resolution.js';
 import { installHooks, type InstallHooksResult } from './install-hooks.js';
 
 export interface InitOptions {
   cwd: string;
+  preview?: boolean;
   overrides?: InitOverrides;
 }
 
@@ -17,6 +18,8 @@ export interface InitResult {
   configPath: string;
   filesWritten: string[];
   hook: InstallHooksResult;
+  preview: boolean;
+  summary: string;
   detected: {
     framework: string;
     styling: string;
@@ -29,6 +32,7 @@ export async function initProject(options: InitOptions): Promise<InitResult> {
     cwd: options.cwd,
     overrides: options.overrides,
   });
+  const summary = formatInitSummary(settings);
   const { configInput, detected } = settings;
   const resolvedDesignSystem =
     configInput.designSystem === detected.designSystem.library
@@ -48,6 +52,21 @@ export async function initProject(options: InitOptions): Promise<InitResult> {
     ['.threadline/skill.md', generateSkillMarkdown()],
   ]);
 
+  if (options.preview) {
+    return {
+      configPath: '.threadline/config.yaml',
+      filesWritten: [],
+      hook: { installed: false, hookPath: '.git/hooks/pre-push', updated: false },
+      preview: true,
+      summary: `${summary}\nPreview only: no files written.`,
+      detected: {
+        framework: detected.framework.framework,
+        styling: detected.styling.strategy,
+        designSystem: detected.designSystem.library,
+      },
+    };
+  }
+
   await Promise.all(
     [...files.entries()].map(([path, contents]) => writeTextFile(join(options.cwd, path), contents)),
   );
@@ -57,6 +76,8 @@ export async function initProject(options: InitOptions): Promise<InitResult> {
     configPath: '.threadline/config.yaml',
     filesWritten: [...files.keys()],
     hook,
+    preview: false,
+    summary,
     detected: {
       framework: detected.framework.framework,
       styling: detected.styling.strategy,
@@ -66,6 +87,10 @@ export async function initProject(options: InitOptions): Promise<InitResult> {
 }
 
 export function formatInitResult(result: InitResult): string {
+  if (result.preview) {
+    return result.summary;
+  }
+
   let hook = 'skipped hook installation';
   if (result.hook.installed) {
     hook = 'installed pre-push hook';
