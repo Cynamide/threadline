@@ -205,6 +205,8 @@ test('threadline init keeps scripted preview usage working with explicit flags a
   const parsed = JSON.parse(result.stdout);
   assert.equal(parsed.preview, true);
   assert.equal(parsed.detected.framework, 'nextjs');
+  assert.match(parsed.summary, /Detected: vite, css-modules, none/);
+  assert.match(parsed.summary, /Applied overrides: framework, styling, designSystem\./);
   assert.equal(parsed.filesWritten.length, 0);
   await assert.rejects(() => stat(join(cwd, '.threadline/config.yaml')));
 });
