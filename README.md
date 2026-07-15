@@ -2,6 +2,15 @@
 
 Threadline is a small toolkit for teams that want to move fast on UI work without losing track of what still needs human attention. It gives you a shared language for saying, “ship the safe part now, and mark the deeper part clearly for later.”
 
+## Get started
+
+```sh
+pnpm add -D @threadline/cli
+npx threadline init
+```
+
+`init` detects the repo shape, writes local Threadline config, and installs the pre-push hook so the first run already leaves the repo in a usable state.
+
 ## Why it exists
 
 UI work tends to split into two kinds of effort:
@@ -27,7 +36,7 @@ That means a developer or agent can ship the safe path immediately, while the de
 2. Threadline detects the repo shape and writes local config and guidance files.
 3. Use `handoff({ ... })` in UI code when a task needs a later implementation pass.
 4. Give the handoff a safe `fallback` so the app still works.
-5. Run `threadline validate` locally or through the pre-push hook to catch boundary issues before they leave the machine.
+5. Run `threadline validate` locally or `threadline validate --staged` before committing to catch boundary issues before they leave the machine.
 6. Run `threadline scan-handoffs` when you want a structured list of outstanding handoffs.
 7. Run `threadline export-handoffs --tracker github` when you want tracker-shaped payloads for follow-up work.
 
@@ -50,6 +59,12 @@ const onExport = handoff({
 
 ```sh
 threadline validate
+```
+
+### Validate only staged files
+
+```sh
+threadline validate --staged
 ```
 
 ### Export handoffs for follow-up work
