@@ -6,7 +6,13 @@ import { generateDesignSystemMarkdown } from '../generators/design-system.js';
 import { generateSkillMarkdown } from '../generators/skill.js';
 
 import { writeTextFile } from '../utils/fs.js';
-import { clarifyInitProposal, finalizeInitProposal, formatInitSummary, resolveInitProposal } from './init-flow.js';
+import {
+  clarifyInitProposal,
+  finalizeInitProposal,
+  formatInitSummary,
+  formatResolvedInitSummary,
+  resolveInitProposal,
+} from './init-flow.js';
 import { installHooks,                         } from './install-hooks.js';
 
 export async function initProject(options             )                      {
@@ -27,7 +33,7 @@ async function writeInitProject(
 
    ,
 )                      {
-  const summary = [formatInitSummary(proposal), options.summarySuffix]
+  const summary = [formatResolvedInitSummary(proposal), options.summarySuffix]
     .filter(Boolean)
     .join('\n');
   const { configInput, detected } = {
@@ -103,7 +109,7 @@ export async function runInteractiveInit(options                        )       
       clarified = await promptForField(prompt, output, clarified, field);
     }
 
-    output.write(`\n${formatInitSummary(clarified)}\n`);
+    output.write(`\n${formatResolvedInitSummary(clarified)}\n`);
     const confirmed = await promptForConfirmation(prompt, output);
     if (!confirmed) {
       output.write('Init cancelled. No files written.\n');

@@ -8,7 +8,20 @@ If you are new to the tool, this is the package you touch first.
 
 ### `threadline init`
 
-Creates the repo-local configuration under `.threadline/`, detects project conventions, and installs hooks.
+Creates the repo-local configuration under `.threadline/`.
+
+Default path:
+
+1. detect project conventions
+2. clarify only unresolved fields
+3. show the resolved proposal for confirmation
+4. write files and install hooks
+
+Compatibility paths:
+
+- explicit init overrides keep `init` non-interactive
+- `--json` returns the resolved proposal/result without prompting
+- `--preview` resolves the proposal without writing files
 
 ### `threadline validate`
 
@@ -54,9 +67,11 @@ The generated config should keep the important knobs explicit:
 ## Example flow
 
 1. Detect the repo shape.
-2. Write the configuration files.
-3. Install the hook.
-4. Let the user validate, scan, and export handoffs locally.
+2. Clarify any unresolved fields.
+3. Confirm the resolved proposal that will be written.
+4. Write the configuration files.
+5. Install the hook.
+6. Let the user validate, scan, and export handoffs locally.
 
 ## Why this package exists
 
@@ -96,6 +111,8 @@ It bridges the gap between the ideas in the docs and the day-to-day workflow: se
 
 - detects common React frameworks
 - detects styling strategy from dependencies and files
+- keeps the final confirmation summary explicit about the resolved proposal
+- accepts controlled natural-language enum clarifications and rejects negated or ambiguous phrases
 - generates valid YAML and Markdown
 - validates staged files
 - scans handoffs with file and line metadata

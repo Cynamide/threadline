@@ -2,17 +2,6 @@ import { relative } from 'node:path';
 import { detectDesignSystem } from '../detectors/components.js';
 import { detectFramework } from '../detectors/framework.js';
 import { detectStyling } from '../detectors/styling.js';
-import type {
-  ConfigInput,
-  DesignSystemLibrary,
-  DetectedInitSettings,
-  FinalizedInitProposal,
-  Framework,
-  InitOverrides,
-  InitProposal,
-  InitProposalField,
-  StylingStrategy,
-} from '../types.js';
 
 const CONFIG_PATH = '.threadline/config.yaml';
 const WRITTEN_FILES = [
@@ -20,8 +9,8 @@ const WRITTEN_FILES = [
   '.threadline/boundaries.md',
   '.threadline/design-system.md',
   '.threadline/skill.md',
-] as const;
-const FIELD_ORDER: InitProposalField[] = [
+]         ;
+const FIELD_ORDER                      = [
   'framework',
   'styling',
   'designSystem',
@@ -30,42 +19,41 @@ const FIELD_ORDER: InitProposalField[] = [
   'devCommand',
   'port',
 ];
-const FRAMEWORK_VALUES: Framework[] = ['nextjs', 'vite', 'cra', 'remix', 'custom'];
-const STYLING_VALUES: StylingStrategy[] = [
+const FRAMEWORK_VALUES              = ['nextjs', 'vite', 'cra', 'remix', 'custom'];
+const STYLING_VALUES                    = [
   'tailwind',
   'styled-components',
   'emotion',
   'css-modules',
   'plain-css',
 ];
-const DESIGN_SYSTEM_VALUES: DesignSystemLibrary[] = ['shadcn', 'mui', 'antd', 'radix', 'custom', 'none'];
+const DESIGN_SYSTEM_VALUES                        = ['shadcn', 'mui', 'antd', 'radix', 'custom', 'none'];
 const MAX_ENUM_CORRECTION_TOKENS = 8;
 const NEGATION_TOKENS = new Set(['no', 'not', 'never', 'without', 'avoid', 'dont']);
 
-export async function resolveInitProposal(options: {
-  cwd: string;
-  overrides?: InitOverrides;
-}): Promise<InitProposal> {
+export async function resolveInitProposal(options
+
+ )                        {
   const detected = await detectAll(options.cwd);
   return buildInitProposal(detected, overridesToUserAnswers(options.overrides));
 }
 
 export function buildInitProposal(
-  detected: DetectedInitSettings,
-  userAnswers: Partial<Record<InitProposalField, string>> = {},
-): InitProposal {
+  detected                      ,
+  userAnswers                                             = {},
+)               {
   return createProposal(detected, userAnswers);
 }
 
 export function clarifyInitProposal(
-  proposal: InitProposal,
-  answer: { field: string; answer: string },
-): InitProposal {
-  if (!FIELD_ORDER.includes(answer.field as InitProposalField)) {
+  proposal              ,
+  answer                                   ,
+)               {
+  if (!FIELD_ORDER.includes(answer.field                     )) {
     throw new Error(`Unknown init field: ${answer.field}`);
   }
 
-  const field = answer.field as InitProposalField;
+  const field = answer.field                     ;
   const normalizedAnswer = answer.answer.trim();
   if (!normalizedAnswer) {
     throw new Error(`Invalid init answer: ${field} must not be empty.`);
@@ -77,19 +65,19 @@ export function clarifyInitProposal(
   });
 }
 
-export function finalizeInitProposal(proposal: InitProposal): FinalizedInitProposal {
+export function finalizeInitProposal(proposal              )                        {
   return proposal.resolved;
 }
 
-export function formatInitSummary(proposal: InitProposal): string {
+export function formatInitSummary(proposal              )         {
   return proposal.summaryLines.join('\n');
 }
 
-export function formatResolvedInitSummary(proposal: InitProposal): string {
+export function formatResolvedInitSummary(proposal              )         {
   return finalizeInitProposal(proposal).summaryLines.join('\n');
 }
 
-async function detectAll(cwd: string): Promise<DetectedInitSettings> {
+async function detectAll(cwd        )                                {
   const [framework, styling, designSystem] = await Promise.all([
     detectFramework(cwd),
     detectStyling(cwd),
@@ -100,9 +88,9 @@ async function detectAll(cwd: string): Promise<DetectedInitSettings> {
 }
 
 function createProposal(
-  detected: DetectedInitSettings,
-  userAnswers: Partial<Record<InitProposalField, string>>,
-): InitProposal {
+  detected                      ,
+  userAnswers                                            ,
+)               {
   const configInput = resolveConfigInput(detected, userAnswers);
   const uncertainFields = inferUncertainFields(detected, configInput, userAnswers);
   const confident = buildConfidentValues(configInput, uncertainFields);
@@ -123,11 +111,11 @@ function createProposal(
 }
 
 function overridesToUserAnswers(
-  overrides: InitOverrides | undefined,
-): Partial<Record<InitProposalField, string>> {
+  overrides                           ,
+)                                             {
   if (!overrides) return {};
 
-  const userAnswers: Partial<Record<InitProposalField, string>> = {};
+  const userAnswers                                             = {};
   if (overrides.framework !== undefined) userAnswers.framework = overrides.framework;
   if (overrides.styling !== undefined) userAnswers.styling = overrides.styling;
   if (overrides.designSystem !== undefined) userAnswers.designSystem = overrides.designSystem;
@@ -139,9 +127,9 @@ function overridesToUserAnswers(
 }
 
 function resolveConfigInput(
-  detected: DetectedInitSettings,
-  userAnswers: Partial<Record<InitProposalField, string>>,
-): ConfigInput {
+  detected                      ,
+  userAnswers                                            ,
+)              {
   const framework = resolveEnum(
     userAnswers.framework,
     FRAMEWORK_VALUES,
@@ -182,11 +170,11 @@ function resolveConfigInput(
 }
 
 function inferUncertainFields(
-  detected: DetectedInitSettings,
-  configInput: ConfigInput,
-  userAnswers: Partial<Record<InitProposalField, string>>,
-): InitProposalField[] {
-  const uncertain = new Set<InitProposalField>();
+  detected                      ,
+  configInput             ,
+  userAnswers                                            ,
+)                      {
+  const uncertain = new Set                   ();
 
   if (userAnswers.framework === undefined && configInput.framework === 'custom') uncertain.add('framework');
   if (userAnswers.styling === undefined && configInput.styling === 'plain-css') uncertain.add('styling');
@@ -199,10 +187,10 @@ function inferUncertainFields(
 }
 
 function shouldClarifyComponentPath(
-  detected: DetectedInitSettings,
-  configInput: ConfigInput,
-  userAnswers: Partial<Record<InitProposalField, string>>,
-): boolean {
+  detected                      ,
+  configInput             ,
+  userAnswers                                            ,
+)          {
   if (userAnswers.componentPath !== undefined) return false;
   if (configInput.componentPath === '.') return true;
   if (detected.designSystem.library === 'shadcn') return true;
@@ -210,11 +198,11 @@ function shouldClarifyComponentPath(
 }
 
 function buildConfidentValues(
-  configInput: ConfigInput,
-  uncertainFields: InitProposalField[],
-): Partial<ConfigInput> {
+  configInput             ,
+  uncertainFields                     ,
+)                       {
   const uncertain = new Set(uncertainFields);
-  const confident: Partial<ConfigInput> = {};
+  const confident                       = {};
 
   if (!uncertain.has('framework')) confident.framework = configInput.framework;
   if (!uncertain.has('styling')) confident.styling = configInput.styling;
@@ -230,10 +218,10 @@ function buildConfidentValues(
 }
 
 function buildSummaryLines(
-  detected: DetectedInitSettings,
-  configInput: ConfigInput,
-  uncertainFields: InitProposalField[],
-): string[] {
+  detected                      ,
+  configInput             ,
+  uncertainFields                     ,
+)           {
   const lines = [
     `Detected: ${detected.framework.framework}, ${detected.styling.strategy}, ${detected.designSystem.library}`,
   ];
@@ -261,13 +249,13 @@ function buildSummaryLines(
 }
 
 function buildResolvedSummaryLines(
-  detected: DetectedInitSettings,
-  configInput: ConfigInput,
-): string[] {
+  detected                      ,
+  configInput             ,
+)           {
   return buildSummaryLines(detected, configInput, []);
 }
 
-function formatFieldLabel(field: InitProposalField): string {
+function formatFieldLabel(field                   )         {
   switch (field) {
     case 'designSystem':
       return 'design system';
@@ -282,7 +270,7 @@ function formatFieldLabel(field: InitProposalField): string {
   }
 }
 
-function formatFieldValue(field: InitProposalField, configInput: ConfigInput): string {
+function formatFieldValue(field                   , configInput             )         {
   switch (field) {
     case 'framework':
       return configInput.framework;
@@ -301,12 +289,12 @@ function formatFieldValue(field: InitProposalField, configInput: ConfigInput): s
   }
 }
 
-function resolveEnum<T extends string>(
-  answer: string | undefined,
-  allowed: readonly T[],
-  fallback: T,
-  label: string,
-): T {
+function resolveEnum                  (
+  answer                    ,
+  allowed              ,
+  fallback   ,
+  label        ,
+)    {
   if (answer === undefined) return fallback;
 
   const normalized = answer.trim().toLowerCase();
@@ -319,14 +307,14 @@ function resolveEnum<T extends string>(
   throw new Error(`Invalid init answer: ${label} must be one of ${allowed.join(', ')}.`);
 }
 
-function parseEnumCorrection<T extends string>(answer: string, allowed: readonly T[]): T | undefined {
+function parseEnumCorrection                  (answer        , allowed              )                {
   const normalized = normalizeEnumPhrase(answer);
   const tokens = normalized.split(' ').filter(Boolean);
   if (tokens.length === 0 || tokens.length > MAX_ENUM_CORRECTION_TOKENS) {
     return undefined;
   }
 
-  const matches: Array<{ value: T; negated: boolean }> = [];
+  const matches                                        = [];
   for (const value of allowed) {
     const aliasTokens = buildEnumAliases(value);
     for (const alias of aliasTokens) {
@@ -348,8 +336,8 @@ function parseEnumCorrection<T extends string>(answer: string, allowed: readonly
   return matches[0].value;
 }
 
-function buildEnumAliases(value: string): string[] {
-  const aliases = new Set<string>([normalizeEnumPhrase(value)]);
+function buildEnumAliases(value        )           {
+  const aliases = new Set        ([normalizeEnumPhrase(value)]);
   if (value.includes('-')) {
     aliases.add(normalizeEnumPhrase(value.replace(/-/g, ' ')));
   }
@@ -362,7 +350,7 @@ function buildEnumAliases(value: string): string[] {
   return [...aliases].filter(Boolean);
 }
 
-function findTokenSequence(tokens: string[], sequence: string[]): number {
+function findTokenSequence(tokens          , sequence          )         {
   for (let index = 0; index <= tokens.length - sequence.length; index += 1) {
     if (sequence.every((token, offset) => tokens[index + offset] === token)) {
       return index;
@@ -371,11 +359,11 @@ function findTokenSequence(tokens: string[], sequence: string[]): number {
   return -1;
 }
 
-function isNegatedMention(tokens: string[], index: number): boolean {
+function isNegatedMention(tokens          , index        )          {
   return tokens.slice(Math.max(0, index - 3), index).some((token) => NEGATION_TOKENS.has(token));
 }
 
-function normalizeEnumPhrase(value: string): string {
+function normalizeEnumPhrase(value        )         {
   return value
     .toLowerCase()
     .replace(/'/g, '')
@@ -384,9 +372,9 @@ function normalizeEnumPhrase(value: string): string {
 }
 
 function resolveDesignSystemImportPath(
-  designSystem: DesignSystemLibrary,
-  detected: DetectedInitSettings,
-): string {
+  designSystem                     ,
+  detected                      ,
+)         {
   if (designSystem === detected.designSystem.library) {
     return detected.designSystem.importPath;
   }
@@ -406,7 +394,7 @@ function resolveDesignSystemImportPath(
   }
 }
 
-function normalizeComponentPath(srcPath: string, componentPath: string): string {
+function normalizeComponentPath(srcPath        , componentPath        )         {
   const normalized = normalizeRelativePath(componentPath, 'componentPath');
   if (normalized === srcPath) {
     return '.';
@@ -417,7 +405,7 @@ function normalizeComponentPath(srcPath: string, componentPath: string): string 
   return normalized;
 }
 
-function normalizeRelativePath(value: string, label: string): string {
+function normalizeRelativePath(value        , label        )         {
   const trimmed = value.trim().replace(/\\/g, '/').replace(/^\.\/+/, '').replace(/\/+$/, '');
   if (!trimmed || trimmed.startsWith('/')) {
     throw new Error(`Invalid init answer: ${label} must be a relative path.`);
@@ -425,7 +413,7 @@ function normalizeRelativePath(value: string, label: string): string {
   return trimmed;
 }
 
-function normalizeDevCommand(value: string): string {
+function normalizeDevCommand(value        )         {
   const trimmed = value.trim();
   if (!trimmed) {
     throw new Error('Invalid init answer: devCommand must not be empty.');
@@ -433,7 +421,7 @@ function normalizeDevCommand(value: string): string {
   return trimmed;
 }
 
-function normalizePort(value: string): number {
+function normalizePort(value        )         {
   const port = Number(value);
   if (!Number.isFinite(port) || port <= 0) {
     throw new Error('Invalid init answer: port must be a positive number.');

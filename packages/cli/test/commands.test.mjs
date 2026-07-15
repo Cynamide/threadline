@@ -104,6 +104,14 @@ test('threadline init shows a summary, asks only about uncertainty, and confirms
   assert.match(result.stdout, /Clarify component path \[components\]:/);
   assert.equal((result.stdout.match(/I'm not fully sure about:/g) ?? []).length, 1);
   assert.match(result.stdout, /No clarification needed before confirmation\./);
+  assert.match(result.stdout, /Proposed config:/);
+  assert.match(result.stdout, /framework: nextjs/);
+  assert.match(result.stdout, /styling: tailwind/);
+  assert.match(result.stdout, /design system: shadcn/);
+  assert.match(result.stdout, /source root: src/);
+  assert.match(result.stdout, /component path: ui/);
+  assert.match(result.stdout, /dev command: npm run dev/);
+  assert.match(result.stdout, /port: 3000/);
   assert.match(result.stdout, /Confirm this config before writing/);
   assert.match(result.stdout, /Threadline initialized \.threadline\/config\.yaml\./);
   assert.match(await readFile(join(cwd, '.threadline/config.yaml'), 'utf8'), /component_path: "ui"/);
@@ -181,7 +189,7 @@ test('threadline init re-prompts when a clarification answer is invalid', async 
   await execFile('git', ['init'], { cwd });
 
   const result = await runCli(['init'], cwd, {
-    input: 'sass\ntailwind\nconfirm\n',
+    input: 'not tailwind\nlet us use tailwind\nconfirm\n',
   });
 
   assert.equal(result.code, 0);
@@ -208,7 +216,11 @@ test('threadline init keeps scripted preview usage working with explicit flags a
   const parsed = JSON.parse(result.stdout);
   assert.equal(parsed.preview, true);
   assert.equal(parsed.detected.framework, 'nextjs');
-  assert.match(parsed.summary, /Detected: vite, css-modules, none/);
+  assert.match(parsed.summary, /Detected: nextjs, plain-css, none/);
+  assert.match(parsed.summary, /Proposed config:/);
+  assert.match(parsed.summary, /framework: vite/);
+  assert.match(parsed.summary, /styling: css-modules/);
+  assert.match(parsed.summary, /design system: none/);
   assert.match(parsed.summary, /Applied overrides: framework, styling, designSystem\./);
   assert.equal(parsed.filesWritten.length, 0);
   await assert.rejects(() => stat(join(cwd, '.threadline/config.yaml')));
