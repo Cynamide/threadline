@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { chmod, mkdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { tmpdir } from 'node:os';
@@ -107,6 +107,69 @@ test('threadline init shows a summary, asks only about uncertainty, and confirms
   assert.equal(result.stderr, '');
 });
 
+test('threadline init writes the same confirmed interactive proposal even if detection inputs change before confirm', async () => {
+  const cwd = await fixture({
+    'package.json': JSON.stringify({ dependencies: { next: '^15.0.0', tailwindcss: '^4.0.0' } }),
+    'next.config.js': 'module.exports = {}',
+    'tailwind.config.js': 'module.exports = {}',
+    'src/components/ui/Button.tsx': 'export function Button() { return null; }',
+  });
+  await execFile('git', ['init'], { cwd });
+  const result = await new Promise((resolve, reject) => {
+    const child = spawn('node', [cliEntry, 'init'], {
+      cwd,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    let stdout = '';
+    let stderr = '';
+    let answeredClarification = false;
+    let sentConfirmation = false;
+    const timeout = setTimeout(() => {
+      child.kill();
+      reject(new Error('Timed out waiting for interactive confirmation prompt.'));
+    }, 5000);
+
+    child.stdout.on('data', async (chunk) => {
+      stdout += chunk.toString();
+
+      if (!answeredClarification && stdout.includes('Clarify component path [components]:')) {
+        answeredClarification = true;
+        child.stdin.write('src/design-system\n');
+        return;
+      }
+
+      if (!sentConfirmation && stdout.includes('Confirm this config before writing?')) {
+        sentConfirmation = true;
+        try {
+          await writeFile(join(cwd, 'tailwind.config.ts'), 'export default {};\n');
+          await rm(join(cwd, 'tailwind.config.js'));
+          child.stdin.end('confirm\n');
+        } catch (error) {
+          clearTimeout(timeout);
+          reject(error);
+        }
+      }
+    });
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk.toString();
+    });
+    child.on('error', (error) => {
+      clearTimeout(timeout);
+      reject(error);
+    });
+    child.on('close', (code) => {
+      clearTimeout(timeout);
+      resolve({ code: code ?? 1, stdout, stderr });
+    });
+  });
+
+  assert.equal(result.code, 0);
+  assert.equal(result.stderr, '');
+  assert.match(result.stdout, /component path: components/);
+  assert.match(await readFile(join(cwd, '.threadline/config.yaml'), 'utf8'), /component_path: "design-system"/);
+  assert.match(await readFile(join(cwd, '.threadline/config.yaml'), 'utf8'), /tailwind_config: "tailwind\.config\.js"/);
+});
+
 test('threadline init re-prompts when a clarification answer is invalid', async () => {
   const cwd = await fixture({
     'package.json': JSON.stringify({ dependencies: { next: '^15.0.0' } }),
@@ -122,6 +185,28 @@ test('threadline init re-prompts when a clarification answer is invalid', async 
   assert.match(result.stdout, /Invalid init answer: styling must be one of tailwind, styled-components, emotion, css-modules, plain-css\./);
   assert.match(result.stdout, /styling/);
   assert.match(await readFile(join(cwd, '.threadline/config.yaml'), 'utf8'), /strategy: "tailwind"/);
+});
+
+test('threadline init keeps scripted preview usage working with explicit flags and json output', async () => {
+  const cwd = await fixture({
+    'package.json': JSON.stringify({ dependencies: { next: '^15.0.0' } }),
+    'next.config.js': 'module.exports = {}',
+  });
+
+  const result = await runCli(
+    ['init', '--preview', '--framework', 'vite', '--styling', 'css-modules', '--design-system', 'none', '--json'],
+    cwd,
+  );
+
+  assert.equal(result.code, 0);
+  assert.equal(result.stderr, '');
+  assert.doesNotMatch(result.stdout, /Confirm this config before writing/);
+
+  const parsed = JSON.parse(result.stdout);
+  assert.equal(parsed.preview, true);
+  assert.equal(parsed.detected.framework, 'nextjs');
+  assert.equal(parsed.filesWritten.length, 0);
+  await assert.rejects(() => stat(join(cwd, '.threadline/config.yaml')));
 });
 
 test('validate reports forbidden imports, paths, and browser storage access as json', async () => {

@@ -45,7 +45,21 @@ export async function initProject(options: InitOptions): Promise<InitResult> {
     cwd: options.cwd,
     overrides: options.overrides,
   });
-  const summary = [formatInitSummary(proposal), formatAppliedOverrides(options.overrides)]
+  return await writeInitProject(options.cwd, proposal, {
+    preview: options.preview ?? false,
+    summarySuffix: formatAppliedOverrides(options.overrides),
+  });
+}
+
+async function writeInitProject(
+  cwd: string,
+  proposal: InitProposal,
+  options: {
+    preview: boolean;
+    summarySuffix?: string;
+  },
+): Promise<InitResult> {
+  const summary = [formatInitSummary(proposal), options.summarySuffix]
     .filter(Boolean)
     .join('\n');
   const { configInput, detected } = {
@@ -86,10 +100,10 @@ export async function initProject(options: InitOptions): Promise<InitResult> {
   }
 
   await Promise.all(
-    [...files.entries()].map(([path, contents]) => writeTextFile(join(options.cwd, path), contents)),
+    [...files.entries()].map(([path, contents]) => writeTextFile(join(cwd, path), contents)),
   );
 
-  const hook = await installHooks({ cwd: options.cwd });
+  const hook = await installHooks({ cwd });
   return {
     configPath: '.threadline/config.yaml',
     filesWritten: [...files.keys()],
@@ -128,10 +142,7 @@ export async function runInteractiveInit(options: InteractiveInitOptions): Promi
       return null;
     }
 
-    return await initProject({
-      cwd: options.cwd,
-      overrides: proposalAnswersToOverrides(clarified),
-    });
+    return await writeInitProject(options.cwd, clarified, { preview: false });
   } finally {
     prompt.close();
   }
@@ -293,19 +304,6 @@ function formatFieldValue(field: InitProposalField, configInput: ReturnType<type
     case 'port':
       return String(configInput.port);
   }
-}
-
-function proposalAnswersToOverrides(proposal: InitProposal): InitOverrides {
-  const configInput = finalizeInitProposal(proposal).configInput;
-  return {
-    framework: configInput.framework,
-    styling: configInput.styling,
-    designSystem: configInput.designSystem,
-    srcPath: configInput.srcPath,
-    componentPath: configInput.componentPath,
-    devCommand: configInput.devCommand,
-    port: configInput.port,
-  };
 }
 
 function formatErrorMessage(error: unknown): string {
