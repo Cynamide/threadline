@@ -2,7 +2,7 @@
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import type { DesignSystemLibrary, Framework, StylingStrategy } from './types.js';
-import { initProject } from './commands/init.js';
+import { initProject, runInteractiveInit, formatInitResult } from './commands/init.js';
 import { validateProject, formatValidateResult } from './commands/validate.js';
 import { scanHandoffs, formatScanHandoffsResult } from './commands/scan-handoffs.js';
 import { installHooks, formatInstallHooksResult } from './commands/install-hooks.js';
@@ -43,6 +43,29 @@ export async function run(argv: string[] = process.argv.slice(2)): Promise<numbe
       return args.help ? 0 : 1;
     }
     if (args.command === 'init') {
+      const hasInitFlags =
+        args.preview ||
+        args.framework !== undefined ||
+        args.styling !== undefined ||
+        args.designSystem !== undefined ||
+        args.srcPath !== undefined ||
+        args.componentPath !== undefined ||
+        args.devCommand !== undefined ||
+        args.port !== undefined;
+
+      if (!args.json && !hasInitFlags) {
+        const result = await runInteractiveInit({
+          cwd: args.cwd,
+          input: process.stdin,
+          output: process.stdout,
+        });
+        if (!result) {
+          return 1;
+        }
+        process.stdout.write(`${formatInitResult(result)}\n`);
+        return 0;
+      }
+
       const result = await initProject({
         cwd: args.cwd,
         preview: args.preview,
@@ -204,11 +227,7 @@ Global flags:
   --json           Emit JSON output when supported
 
 Commands:
-  init             Write .threadline config files and install hooks
-                   Add --preview to inspect the inferred config without writing files.
-                   Use --framework <value>, --styling <value>, --design-system <value>,
-                   --src-path <path>, --component-path <path>, --dev-command <value>,
-                   and --port <number> to override common init settings.
+  init             Detect project settings, clarify uncertainty, and write .threadline files
   validate         Validate source files against Threadline boundaries
                    Add --staged to limit validation to staged files.
   scan-handoffs    Extract handoff() records for tracker export

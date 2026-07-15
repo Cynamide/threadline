@@ -3,7 +3,7 @@ import { chmod, mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { tmpdir } from 'node:os';
-import { execFile as execFileCallback } from 'node:child_process';
+import { execFile as execFileCallback, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 
@@ -31,17 +31,41 @@ async function fixture(files = {}) {
   return root;
 }
 
-async function runCli(args, cwd) {
-  try {
-    const { stdout, stderr } = await execFile('node', [cliEntry, ...args], { cwd });
-    return { code: 0, stdout, stderr };
-  } catch (error) {
-    return {
-      code: typeof error?.code === 'number' ? error.code : 1,
-      stdout: error?.stdout ?? '',
-      stderr: error?.stderr ?? '',
-    };
+async function runCli(args, cwd, options = {}) {
+  if (options.input === undefined) {
+    try {
+      const { stdout, stderr } = await execFile('node', [cliEntry, ...args], { cwd });
+      return { code: 0, stdout, stderr };
+    } catch (error) {
+      return {
+        code: typeof error?.code === 'number' ? error.code : 1,
+        stdout: error?.stdout ?? '',
+        stderr: error?.stderr ?? '',
+      };
+    }
   }
+
+  return await new Promise((resolve, reject) => {
+    const child = spawn('node', [cliEntry, ...args], {
+      cwd,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    let stdout = '';
+    let stderr = '';
+
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk.toString();
+    });
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk.toString();
+    });
+    child.on('error', reject);
+    child.on('close', (code) => {
+      resolve({ code: code ?? 1, stdout, stderr });
+    });
+
+    child.stdin.end(options.input);
+  });
 }
 
 test('init writes threadline config files and installs pre-push hook', async () => {
@@ -61,7 +85,7 @@ test('init writes threadline config files and installs pre-push hook', async () 
   assert.match(await readFile(join(cwd, '.git/hooks/pre-push'), 'utf8'), /threadline validate --staged/);
 });
 
-test('threadline init preview prints the resolved summary without writing files', async () => {
+test('threadline init shows a summary, asks only about uncertainty, and confirms before write', async () => {
   const cwd = await fixture({
     'package.json': JSON.stringify({ dependencies: { next: '^15.0.0', tailwindcss: '^4.0.0' } }),
     'next.config.js': 'module.exports = {}',
@@ -69,49 +93,35 @@ test('threadline init preview prints the resolved summary without writing files'
   });
   await execFile('git', ['init'], { cwd });
 
-  const result = await runCli(['init', '--preview'], cwd);
+  const result = await runCli(['init'], cwd, {
+    input: 'src/ui\nconfirm\n',
+  });
 
   assert.equal(result.code, 0);
   assert.match(result.stdout, /Detected: nextjs, tailwind, shadcn/);
-  assert.match(result.stdout, /Preview only/);
-  await assert.rejects(stat(join(cwd, '.threadline/config.yaml')));
+  assert.match(result.stdout, /I'm not fully sure about:/);
+  assert.match(result.stdout, /component path: ui/);
+  assert.match(result.stdout, /Confirm this config before writing/);
+  assert.match(result.stdout, /Threadline initialized \.threadline\/config\.yaml\./);
+  assert.match(await readFile(join(cwd, '.threadline/config.yaml'), 'utf8'), /component_path: "ui"/);
   assert.equal(result.stderr, '');
 });
 
-test('threadline init accepts explicit overrides for common knobs', async () => {
+test('threadline init re-prompts when a clarification answer is invalid', async () => {
   const cwd = await fixture({
     'package.json': JSON.stringify({ dependencies: { next: '^15.0.0' } }),
     'next.config.js': 'module.exports = {}',
   });
   await execFile('git', ['init'], { cwd });
 
-  const result = await runCli(
-    [
-      'init',
-      '--framework',
-      'vite',
-      '--styling',
-      'css-modules',
-      '--design-system',
-      'none',
-      '--src-path',
-      'app',
-      '--component-path',
-      'components',
-      '--dev-command',
-      'pnpm dev',
-      '--port',
-      '4173',
-    ],
-    cwd,
-  );
+  const result = await runCli(['init'], cwd, {
+    input: 'sass\ntailwind\nconfirm\n',
+  });
 
   assert.equal(result.code, 0);
-  assert.match(
-    result.stdout,
-    /Applied overrides: framework, styling, designSystem, srcPath, componentPath, devCommand, port/,
-  );
-  assert.match(await readFile(join(cwd, '.threadline/config.yaml'), 'utf8'), /framework: "vite"/);
+  assert.match(result.stdout, /Invalid init answer: styling must be one of tailwind, styled-components, emotion, css-modules, plain-css\./);
+  assert.match(result.stdout, /styling/);
+  assert.match(await readFile(join(cwd, '.threadline/config.yaml'), 'utf8'), /strategy: "tailwind"/);
 });
 
 test('validate reports forbidden imports, paths, and browser storage access as json', async () => {
@@ -560,9 +570,9 @@ test('cli shows help for --help and -h and surfaces staged validation', async ()
     assert.equal(result.code, 0);
     assert.match(result.stdout, /Usage: threadline <command> \[options\]/);
     assert.match(result.stdout, /--staged/);
-    assert.match(result.stdout, /--preview/);
-    assert.match(result.stdout, /--framework <value>/);
-    assert.match(result.stdout, /--component-path <path>/);
+    assert.match(result.stdout, /init             Detect project settings, clarify uncertainty, and write \.threadline files/);
+    assert.doesNotMatch(result.stdout, /--preview/);
+    assert.doesNotMatch(result.stdout, /--framework <value>/);
     assert.equal(result.stderr, '');
   }
 });
