@@ -499,6 +499,18 @@ export function Settings() {
   assert.equal(invalid.stdout, '');
 });
 
+test('cli shows help for --help and -h and surfaces staged validation', async () => {
+  const cwd = await fixture();
+
+  for (const args of [['--help'], ['-h'], ['validate', '--help']]) {
+    const result = await runCli(args, cwd);
+    assert.equal(result.code, 0);
+    assert.match(result.stdout, /Usage: threadline <command> \[options\]/);
+    assert.match(result.stdout, /--staged/);
+    assert.equal(result.stderr, '');
+  }
+});
+
 test('scan-handoffs includes invalid handoff calls with errors', async () => {
   const cwd = await fixture({
     'src/components/Bad.tsx': `import { handoff } from '@threadline/runtime';

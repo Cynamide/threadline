@@ -17,6 +17,7 @@ interface ParsedArgs {
   command: string | null;
   cwd: string;
   json: boolean;
+  help: boolean;
   staged: boolean;
   tracker: 'github' | 'linear';
 }
@@ -24,6 +25,10 @@ interface ParsedArgs {
 export async function run(argv: string[] = process.argv.slice(2)): Promise<number> {
   try {
     const args = parseArgs(argv);
+    if (args.help || !args.command) {
+      process.stdout.write(help());
+      return args.help ? 0 : 1;
+    }
     if (args.command === 'init') {
       const result = await initProject({ cwd: args.cwd });
       if (args.json) {
@@ -80,12 +85,15 @@ function parseArgs(argv: string[]): ParsedArgs {
   let command: string | null = null;
   let cwd = process.cwd();
   let json = false;
+  let help = false;
   let staged = false;
   let tracker: 'github' | 'linear' = 'github';
 
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
-    if (arg === '--cwd') {
+    if (arg === '--help' || arg === '-h') {
+      help = true;
+    } else if (arg === '--cwd') {
       cwd = argv[index + 1] ?? cwd;
       index += 1;
     } else if (arg === '--json') {
@@ -108,17 +116,24 @@ function parseArgs(argv: string[]): ParsedArgs {
     }
   }
 
-  return { command, cwd, json, staged, tracker };
+  return { command, cwd, json, help, staged, tracker };
 }
 
 function help(): string {
-  return `Usage: threadline <command> [--cwd path] [--json] [--tracker github|linear]
+  return `Usage: threadline <command> [options]
+
+Global flags:
+  -h, --help       Show this help message
+  --cwd <path>     Run against a different working directory
+  --json           Emit JSON output when supported
 
 Commands:
   init             Write .threadline config files and install hooks
   validate         Validate source files against Threadline boundaries
+                   Add --staged to limit validation to staged files.
   scan-handoffs    Extract handoff() records for tracker export
   export-handoffs  Shape canonical handoff records for a tracker
+                   Use --tracker github|linear to choose the adapter.
   install-hooks    Install the local pre-push validation hook
 `;
 }
