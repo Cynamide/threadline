@@ -98,7 +98,7 @@ function createProposal(
   userAnswers: Partial<Record<InitProposalField, string>>,
 ): InitProposal {
   const configInput = resolveConfigInput(detected, userAnswers);
-  const uncertainFields = inferUncertainFields(detected, configInput);
+  const uncertainFields = inferUncertainFields(detected, configInput, userAnswers);
   const confident = buildConfidentValues(configInput, uncertainFields);
   const summaryLines = buildSummaryLines(configInput, uncertainFields);
 
@@ -177,6 +177,7 @@ function resolveConfigInput(
 function inferUncertainFields(
   detected: DetectedInitSettings,
   configInput: ConfigInput,
+  userAnswers: Partial<Record<InitProposalField, string>>,
 ): InitProposalField[] {
   const uncertain = new Set<InitProposalField>();
 
@@ -184,7 +185,7 @@ function inferUncertainFields(
   if (configInput.styling === 'plain-css') uncertain.add('styling');
   if (configInput.designSystem === 'custom') uncertain.add('designSystem');
   if (!configInput.srcPath || configInput.srcPath === '.') uncertain.add('srcPath');
-  if (shouldClarifyComponentPath(detected, configInput)) uncertain.add('componentPath');
+  if (shouldClarifyComponentPath(detected, configInput, userAnswers)) uncertain.add('componentPath');
   if (!configInput.devCommand) uncertain.add('devCommand');
 
   return FIELD_ORDER.filter((field) => uncertain.has(field));
@@ -193,7 +194,9 @@ function inferUncertainFields(
 function shouldClarifyComponentPath(
   detected: DetectedInitSettings,
   configInput: ConfigInput,
+  userAnswers: Partial<Record<InitProposalField, string>>,
 ): boolean {
+  if (userAnswers.componentPath !== undefined) return false;
   if (configInput.componentPath === '.') return true;
   if (detected.designSystem.library === 'shadcn') return true;
   return false;

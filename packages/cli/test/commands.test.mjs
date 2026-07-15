@@ -100,7 +100,10 @@ test('threadline init shows a summary, asks only about uncertainty, and confirms
   assert.equal(result.code, 0);
   assert.match(result.stdout, /Detected: nextjs, tailwind, shadcn/);
   assert.match(result.stdout, /I'm not fully sure about:/);
-  assert.match(result.stdout, /component path: ui/);
+  assert.match(result.stdout, /component path: components/);
+  assert.match(result.stdout, /Clarify component path \[components\]:/);
+  assert.equal((result.stdout.match(/I'm not fully sure about:/g) ?? []).length, 1);
+  assert.match(result.stdout, /No clarification needed before confirmation\./);
   assert.match(result.stdout, /Confirm this config before writing/);
   assert.match(result.stdout, /Threadline initialized \.threadline\/config\.yaml\./);
   assert.match(await readFile(join(cwd, '.threadline/config.yaml'), 'utf8'), /component_path: "ui"/);
