@@ -53,3 +53,32 @@ test('clarifyInitProposal accepts a natural-language correction and validates it
 
   assert.equal(proposal.resolved.configInput.componentPath, 'ui');
 });
+
+test('clarifyInitProposal rejects ambiguous enum clarifications', () => {
+  assert.throws(
+    () =>
+      clarifyInitProposal(
+        buildInitProposal({
+          framework: {
+            framework: 'nextjs',
+            srcPath: 'src',
+            componentPath: 'components',
+            devCommand: 'npm run dev',
+            port: 3000,
+            reasons: ['found Next.js dependency or config'],
+          },
+          styling: {
+            strategy: 'tailwind',
+            tailwindConfig: 'tailwind.config.ts',
+            reasons: ['found Tailwind dependency or config'],
+          },
+          designSystem: {
+            library: 'shadcn',
+            importPath: '@/components/ui',
+          },
+        }),
+        { field: 'framework', answer: 'not nextjs, use vite' },
+      ),
+    /Invalid init answer: framework must be one of nextjs, vite, cra, remix, custom\./,
+  );
+});

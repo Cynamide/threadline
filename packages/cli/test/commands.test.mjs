@@ -72,7 +72,7 @@ test('threadline init preview prints the resolved summary without writing files'
   const result = await runCli(['init', '--preview'], cwd);
 
   assert.equal(result.code, 0);
-  assert.match(result.stdout, /Detected nextjs, tailwind, shadcn/);
+  assert.match(result.stdout, /Detected: nextjs, tailwind, shadcn/);
   assert.match(result.stdout, /Preview only/);
   await assert.rejects(stat(join(cwd, '.threadline/config.yaml')));
   assert.equal(result.stderr, '');

@@ -8,6 +8,7 @@ import type {
   DetectedInitSettings,
   FinalizedInitProposal,
   Framework,
+  InitOverrides,
   InitProposal,
   InitProposalField,
   StylingStrategy,
@@ -39,13 +40,19 @@ const STYLING_VALUES: StylingStrategy[] = [
 ];
 const DESIGN_SYSTEM_VALUES: DesignSystemLibrary[] = ['shadcn', 'mui', 'antd', 'radix', 'custom', 'none'];
 
-export async function resolveInitProposal(options: { cwd: string }): Promise<InitProposal> {
+export async function resolveInitProposal(options: {
+  cwd: string;
+  overrides?: InitOverrides;
+}): Promise<InitProposal> {
   const detected = await detectAll(options.cwd);
-  return buildInitProposal(detected);
+  return buildInitProposal(detected, overridesToUserAnswers(options.overrides));
 }
 
-export function buildInitProposal(detected: DetectedInitSettings): InitProposal {
-  return createProposal(detected, {});
+export function buildInitProposal(
+  detected: DetectedInitSettings,
+  userAnswers: Partial<Record<InitProposalField, string>> = {},
+): InitProposal {
+  return createProposal(detected, userAnswers);
 }
 
 export function clarifyInitProposal(
@@ -106,6 +113,22 @@ function createProposal(
     },
     summaryLines,
   };
+}
+
+function overridesToUserAnswers(
+  overrides: InitOverrides | undefined,
+): Partial<Record<InitProposalField, string>> {
+  if (!overrides) return {};
+
+  const userAnswers: Partial<Record<InitProposalField, string>> = {};
+  if (overrides.framework !== undefined) userAnswers.framework = overrides.framework;
+  if (overrides.styling !== undefined) userAnswers.styling = overrides.styling;
+  if (overrides.designSystem !== undefined) userAnswers.designSystem = overrides.designSystem;
+  if (overrides.srcPath !== undefined) userAnswers.srcPath = overrides.srcPath;
+  if (overrides.componentPath !== undefined) userAnswers.componentPath = overrides.componentPath;
+  if (overrides.devCommand !== undefined) userAnswers.devCommand = overrides.devCommand;
+  if (overrides.port !== undefined) userAnswers.port = String(overrides.port);
+  return userAnswers;
 }
 
 function resolveConfigInput(
@@ -263,9 +286,6 @@ function resolveEnum<T extends string>(
   const normalized = answer.trim().toLowerCase();
   const direct = allowed.find((value) => value === normalized);
   if (direct) return direct;
-
-  const inferred = allowed.find((value) => normalized.includes(value));
-  if (inferred) return inferred;
 
   throw new Error(`Invalid init answer: ${label} must be one of ${allowed.join(', ')}.`);
 }

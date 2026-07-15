@@ -30,8 +30,11 @@ export interface InitResult {
 export async function initProject(options: InitOptions): Promise<InitResult> {
   const proposal = await resolveInitProposal({
     cwd: options.cwd,
+    overrides: options.overrides,
   });
-  const summary = formatInitSummary(proposal);
+  const summary = [formatInitSummary(proposal), formatAppliedOverrides(options.overrides)]
+    .filter(Boolean)
+    .join('\n');
   const { configInput, detected } = {
     ...finalizeInitProposal(proposal),
     detected: proposal.detected,
@@ -103,4 +106,21 @@ export function formatInitResult(result: InitResult): string {
     `Detected ${result.detected.framework}, ${result.detected.styling}, ${result.detected.designSystem}.`,
     `Wrote ${result.filesWritten.join(', ')} and ${hook}.`,
   ].join('\n');
+}
+
+function formatAppliedOverrides(overrides: InitOverrides | undefined): string {
+  if (!overrides) return '';
+
+  const order: Array<keyof InitOverrides> = [
+    'framework',
+    'styling',
+    'designSystem',
+    'srcPath',
+    'componentPath',
+    'devCommand',
+    'port',
+  ];
+  const applied = order.filter((key) => overrides[key] !== undefined);
+  if (applied.length === 0) return '';
+  return `Applied overrides: ${applied.join(', ')}.`;
 }
