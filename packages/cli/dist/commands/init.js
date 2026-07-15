@@ -1,38 +1,34 @@
 import { join } from 'node:path';
-import { detectDesignSystem } from '../detectors/components.js';
-import { detectFramework } from '../detectors/framework.js';
-import { detectStyling } from '../detectors/styling.js';
 import { generateBoundariesMarkdown } from '../generators/boundaries.js';
 import { generateConfigYaml } from '../generators/config.js';
 import { generateDesignSystemMarkdown } from '../generators/design-system.js';
 import { generateSkillMarkdown } from '../generators/skill.js';
+
 import { writeTextFile } from '../utils/fs.js';
+import { resolveInitSettings } from './init-resolution.js';
 import { installHooks,                         } from './install-hooks.js';
 
 export async function initProject(options             )                      {
-  const [framework, styling, designSystem] = await Promise.all([
-    detectFramework(options.cwd),
-    detectStyling(options.cwd),
-    detectDesignSystem(options.cwd),
-  ]);
+  const settings = await resolveInitSettings({
+    cwd: options.cwd,
+    overrides: options.overrides,
+  });
+  const { configInput, detected } = settings;
+  const resolvedDesignSystem =
+    configInput.designSystem === detected.designSystem.library
+      ? detected.designSystem
+      : {
+          library: configInput.designSystem,
+          importPath: configInput.designSystemImportPath,
+        };
 
   const files = new Map                ([
     [
       '.threadline/config.yaml',
-      generateConfigYaml({
-        framework: framework.framework,
-        srcPath: framework.srcPath,
-        componentPath: framework.componentPath,
-        devCommand: framework.devCommand,
-        port: framework.port,
-        styling: styling.strategy,
-        tailwindConfig: styling.tailwindConfig,
-        designSystem: designSystem.library,
-        designSystemImportPath: designSystem.importPath,
-      }),
+      generateConfigYaml(configInput),
     ],
     ['.threadline/boundaries.md', generateBoundariesMarkdown()],
-    ['.threadline/design-system.md', generateDesignSystemMarkdown(designSystem)],
+    ['.threadline/design-system.md', generateDesignSystemMarkdown(resolvedDesignSystem)],
     ['.threadline/skill.md', generateSkillMarkdown()],
   ]);
 
@@ -46,9 +42,9 @@ export async function initProject(options             )                      {
     filesWritten: [...files.keys()],
     hook,
     detected: {
-      framework: framework.framework,
-      styling: styling.strategy,
-      designSystem: designSystem.library,
+      framework: detected.framework.framework,
+      styling: detected.styling.strategy,
+      designSystem: detected.designSystem.library,
     },
   };
 }

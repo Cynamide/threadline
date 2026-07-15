@@ -34,6 +34,30 @@ export interface ConfigInput {
   designSystemImportPath: string;
 }
 
+export interface InitOverrides {
+  framework?: Framework;
+  styling?: StylingStrategy;
+  designSystem?: DesignSystemLibrary;
+  srcPath?: string;
+  componentPath?: string;
+  devCommand?: string;
+  port?: number;
+}
+
+export interface DetectedInitSettings {
+  framework: FrameworkDetection;
+  styling: StylingDetection;
+  designSystem: DesignSystemDetection;
+}
+
+export interface InitSettings {
+  configInput: ConfigInput;
+  detected: DetectedInitSettings;
+  overrides: InitOverrides;
+  overridesApplied: string[];
+  summaryLines: string[];
+}
+
 export interface ThreadlineConfig {
   version: string;
   project: {
