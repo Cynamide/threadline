@@ -511,6 +511,18 @@ test('cli shows help for --help and -h and surfaces staged validation', async ()
   }
 });
 
+test('cli rejects unknown flags and stray positional args', async () => {
+  const cwd = await fixture();
+
+  const unknownFlag = await runCli(['validate', '--bogus'], cwd);
+  assert.equal(unknownFlag.code, 1);
+  assert.match(unknownFlag.stderr, /Unknown flag "--bogus"/);
+
+  const unexpectedArg = await runCli(['validate', 'extra'], cwd);
+  assert.equal(unexpectedArg.code, 1);
+  assert.match(unexpectedArg.stderr, /Unexpected argument "extra"/);
+});
+
 test('scan-handoffs includes invalid handoff calls with errors', async () => {
   const cwd = await fixture({
     'src/components/Bad.tsx': `import { handoff } from '@threadline/runtime';

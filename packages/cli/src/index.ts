@@ -94,7 +94,11 @@ function parseArgs(argv: string[]): ParsedArgs {
     if (arg === '--help' || arg === '-h') {
       help = true;
     } else if (arg === '--cwd') {
-      cwd = argv[index + 1] ?? cwd;
+      const next = argv[index + 1];
+      if (next === undefined || next.startsWith('-')) {
+        throw new Error('Missing value for --cwd. Provide a directory path.');
+      }
+      cwd = next;
       index += 1;
     } else if (arg === '--json') {
       json = true;
@@ -111,8 +115,12 @@ function parseArgs(argv: string[]): ParsedArgs {
         throw new Error(`Invalid tracker "${next}". Use github or linear.`);
       }
       index += 1;
+    } else if (arg.startsWith('-')) {
+      throw new Error(`Unknown flag "${arg}". Use --help to see supported options.`);
     } else if (!command) {
       command = arg;
+    } else {
+      throw new Error(`Unexpected argument "${arg}". Use --help to see supported options.`);
     }
   }
 
