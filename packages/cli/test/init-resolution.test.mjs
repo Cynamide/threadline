@@ -81,7 +81,7 @@ test('mergeInitSettings keeps componentPath relative to srcPath', () => {
   assert.equal(result.configInput.componentPath, 'components');
 });
 
-test('mergeInitSettings rewrites sibling componentPath relative to srcPath', () => {
+test('mergeInitSettings preserves detected config-relative componentPath values', () => {
   const result = mergeInitSettings(
     {
       framework: {
@@ -105,7 +105,7 @@ test('mergeInitSettings rewrites sibling componentPath relative to srcPath', () 
   );
 
   assert.equal(result.configInput.srcPath, 'src');
-  assert.equal(result.configInput.componentPath, '../components');
+  assert.equal(result.configInput.componentPath, 'components');
 });
 
 test('mergeInitSettings rejects absolute srcPath overrides', () => {
@@ -136,6 +136,37 @@ test('mergeInitSettings rejects absolute srcPath overrides', () => {
         },
       ),
     /srcPath must be a relative path/,
+  );
+});
+
+test('mergeInitSettings rejects absolute componentPath overrides', () => {
+  assert.throws(
+    () =>
+      mergeInitSettings(
+        {
+          framework: {
+            framework: 'nextjs',
+            srcPath: 'src',
+            componentPath: 'components',
+            devCommand: 'npm run dev',
+            port: 3000,
+            reasons: ['found Next.js dependency or config'],
+          },
+          styling: {
+            strategy: 'tailwind',
+            tailwindConfig: 'tailwind.config.ts',
+            reasons: ['found Tailwind dependency or config'],
+          },
+          designSystem: {
+            library: 'shadcn',
+            importPath: '@/components/ui',
+          },
+        },
+        {
+          componentPath: '/absolute/components',
+        },
+      ),
+    /componentPath must be a relative path/,
   );
 });
 

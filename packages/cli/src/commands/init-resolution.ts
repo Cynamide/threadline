@@ -122,7 +122,13 @@ function resolveDesignSystemImportPath(
 
 function normalizeDetectedComponentPath(srcPath: string, componentPath: string): string {
   const normalized = normalizeRelativePath(componentPath, 'componentPath');
-  return relative(srcPath, normalized) || '.';
+  if (normalized === srcPath) {
+    return '.';
+  }
+  if (normalized.startsWith(`${srcPath}/`)) {
+    return relative(srcPath, normalized) || '.';
+  }
+  return normalized;
 }
 
 function normalizeOverrideComponentPath(srcPath: string, componentPath: string): string {
