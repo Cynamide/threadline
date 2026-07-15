@@ -80,3 +80,92 @@ test('mergeInitSettings keeps componentPath relative to srcPath', () => {
   assert.equal(result.configInput.srcPath, 'app');
   assert.equal(result.configInput.componentPath, 'components');
 });
+
+test('mergeInitSettings rewrites sibling componentPath relative to srcPath', () => {
+  const result = mergeInitSettings(
+    {
+      framework: {
+        framework: 'nextjs',
+        srcPath: 'src',
+        componentPath: 'components',
+        devCommand: 'npm run dev',
+        port: 3000,
+        reasons: ['found Next.js dependency or config'],
+      },
+      styling: {
+        strategy: 'tailwind',
+        tailwindConfig: 'tailwind.config.ts',
+        reasons: ['found Tailwind dependency or config'],
+      },
+      designSystem: {
+        library: 'shadcn',
+        importPath: '@/components/ui',
+      },
+    },
+  );
+
+  assert.equal(result.configInput.srcPath, 'src');
+  assert.equal(result.configInput.componentPath, '../components');
+});
+
+test('mergeInitSettings rejects absolute srcPath overrides', () => {
+  assert.throws(
+    () =>
+      mergeInitSettings(
+        {
+          framework: {
+            framework: 'nextjs',
+            srcPath: 'src',
+            componentPath: 'components',
+            devCommand: 'npm run dev',
+            port: 3000,
+            reasons: ['found Next.js dependency or config'],
+          },
+          styling: {
+            strategy: 'tailwind',
+            tailwindConfig: 'tailwind.config.ts',
+            reasons: ['found Tailwind dependency or config'],
+          },
+          designSystem: {
+            library: 'shadcn',
+            importPath: '@/components/ui',
+          },
+        },
+        {
+          srcPath: '/absolute/path',
+        },
+      ),
+    /srcPath must be a relative path/,
+  );
+});
+
+test('mergeInitSettings rejects non-positive port overrides', () => {
+  assert.throws(
+    () =>
+      mergeInitSettings(
+        {
+          framework: {
+            framework: 'nextjs',
+            srcPath: 'src',
+            componentPath: 'components',
+            devCommand: 'npm run dev',
+            port: 3000,
+            reasons: ['found Next.js dependency or config'],
+          },
+          styling: {
+            strategy: 'tailwind',
+            tailwindConfig: 'tailwind.config.ts',
+            reasons: ['found Tailwind dependency or config'],
+          },
+          designSystem: {
+            library: 'shadcn',
+            importPath: '@/components/ui',
+          },
+        },
+        {
+          port: 0,
+        },
+      ),
+    /port must be a positive number/,
+  );
+});

@@ -10,10 +10,10 @@ export function mergeInitSettings(
   overrides                = {},
 )               {
   const srcPath = normalizeRelativePath(overrides.srcPath ?? detected.framework.srcPath, 'srcPath');
-  const componentPath = normalizeComponentPath(
-    srcPath,
-    overrides.componentPath ?? detected.framework.componentPath,
-  );
+  const componentPath =
+    overrides.componentPath !== undefined
+      ? normalizeOverrideComponentPath(srcPath, overrides.componentPath)
+      : normalizeDetectedComponentPath(srcPath, detected.framework.componentPath);
   const styling = overrides.styling ?? detected.styling.strategy;
   const designSystem = overrides.designSystem ?? detected.designSystem.library;
 
@@ -111,7 +111,12 @@ function resolveDesignSystemImportPath(
   }
 }
 
-function normalizeComponentPath(srcPath        , componentPath        )         {
+function normalizeDetectedComponentPath(srcPath        , componentPath        )         {
+  const normalized = normalizeRelativePath(componentPath, 'componentPath');
+  return relative(srcPath, normalized) || '.';
+}
+
+function normalizeOverrideComponentPath(srcPath        , componentPath        )         {
   const normalized = normalizeRelativePath(componentPath, 'componentPath');
   if (normalized === srcPath) {
     return '.';
