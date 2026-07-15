@@ -50,6 +50,29 @@ export interface DetectedInitSettings {
   designSystem: DesignSystemDetection;
 }
 
+export type InitProposalField =
+  | 'framework'
+  | 'styling'
+  | 'designSystem'
+  | 'srcPath'
+  | 'componentPath'
+  | 'devCommand'
+  | 'port';
+
+export interface FinalizedInitProposal {
+  configInput: ConfigInput;
+  summaryLines: string[];
+}
+
+export interface InitProposal {
+  detected: DetectedInitSettings;
+  confident: Partial<ConfigInput>;
+  uncertainFields: InitProposalField[];
+  userAnswers: Partial<Record<InitProposalField, string>>;
+  resolved: FinalizedInitProposal;
+  summaryLines: string[];
+}
+
 export interface InitSettings {
   configInput: ConfigInput;
   detected: DetectedInitSettings;

@@ -1,16 +1,17 @@
-# ADR 0006: Init Detection and Overrides
+# ADR 0006: Agent-Native Init Detection and Clarification
 
 - Status: Accepted
 - Date: 2026-07-14
 
 ## Context
 
-`threadline init` already detects framework, styling, and design-system conventions from the
-repository and writes `.threadline/config.yaml` plus companion docs. The next customer-experience
-slice needs a shared resolution layer so the init flow can consistently reuse the same detected
-state for config generation, summary output, and a future small set of CLI override flags.
+`threadline init` needs to feel like guided setup for a real repository. The tool already has
+useful detectors for framework, styling, and design-system conventions, but detection alone is not
+enough when a repo is only partly legible. The customer flow should tell the user what Threadline
+thinks it found, narrow any ambiguity to a short clarification, validate the answer, and confirm
+the config before writing local files.
 
-The config schema is intentionally constrained:
+The config schema remains intentionally constrained:
 
 - `version` stays `"1.0"`
 - `project.component_path` stays relative to `project.src_path`
@@ -20,44 +21,51 @@ The config schema is intentionally constrained:
 
 ## Decision
 
-`threadline init` stays code-driven.
+`threadline init` is agent-native and interactive.
 
-We will add a shared init-resolution helper that:
+We will use a shared init-flow helper that:
 
 - runs the existing detectors for framework, styling, and design system
-- merges only a small set of explicit overrides for high-value knobs
-- normalizes the resolved config input so it stays valid against `specs/config-schema.md`
-- produces concise summary lines that describe detection, applied overrides, and the config target
+- builds a proposal with confident defaults plus a narrow list of uncertain fields
+- accepts short user clarifications, including natural-language corrections
+- validates the proposed config before final confirmation
+- produces summary lines that explain what was detected, what is uncertain, and what will be
+  written
 
-The public `initProject` and `formatInitResult` interfaces remain compatible during this slice.
-Task 1 threads the new resolution layer underneath the current init command implementation without
-introducing preview mode or new CLI flags yet.
+The primary customer flow is:
+
+1. detect
+2. clarify only uncertainty
+3. confirm
+4. write
+
+`--preview` and init override flags are not part of the normal customer path.
 
 ## Consequences
 
 ### Positive
 
-- detection, override handling, and summary text all share one source of truth
-- the init path stays fast and deterministic for first-run users
-- later CLI wiring can reuse the same resolved state instead of rebuilding config decisions in
-  multiple places
+- new users get a calm first-run flow that explains what Threadline inferred
+- uncertainty becomes a short interaction instead of a large option surface
+- detection, clarification, confirmation, and file generation share one validated config proposal
 
 ### Negative
 
-- users do not get a prompt-heavy wizard for unusual repositories
-- only the chosen override knobs are supported through the shared layer
+- init now needs lightweight interaction state instead of a purely one-shot resolver
+- unusual repositories still require careful clarification prompts to avoid over-asking
 
 ## Trade-off
 
-We are explicitly choosing a concise, code-driven init flow over a prompt-heavy wizard. That gives
-new users a clearer and faster first-run path, while still leaving room for targeted overrides when
-the detector guess is wrong or the repository shape is unusual.
+We are choosing an agent-guided confirmation loop over a flag-first init ritual. That adds a small
+amount of interaction, but it keeps the common path focused on understanding and validating the repo
+shape instead of forcing users to assemble config manually.
 
 ## Verification Notes
 
-The resolver shape aligns with the current config schema constraints:
+Read against `docs/superpowers/specs/2026-07-14-threadline-init-agent-native-flow.md` and
+`specs/config-schema.md`, this decision keeps the required constraints intact:
 
-- resolved config still renders with `version: "1.0"`
-- component paths are normalized relative to the selected source path
-- design-system and validation defaults stay in config generation, not in ad hoc command logic
-- override handling is limited to the common knobs needed for init UX work
+- the proposal must validate before write
+- component paths are normalized relative to the selected source root
+- required enum fields remain explicit in the config
+- the final confirmation happens before `.threadline/config.yaml` and companion files are written

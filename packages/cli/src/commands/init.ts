@@ -5,7 +5,7 @@ import { generateDesignSystemMarkdown } from '../generators/design-system.js';
 import { generateSkillMarkdown } from '../generators/skill.js';
 import type { InitOverrides } from '../types.js';
 import { writeTextFile } from '../utils/fs.js';
-import { formatInitSummary, resolveInitSettings } from './init-resolution.js';
+import { finalizeInitProposal, formatInitSummary, resolveInitProposal } from './init-flow.js';
 import { installHooks, type InstallHooksResult } from './install-hooks.js';
 
 export interface InitOptions {
@@ -28,12 +28,14 @@ export interface InitResult {
 }
 
 export async function initProject(options: InitOptions): Promise<InitResult> {
-  const settings = await resolveInitSettings({
+  const proposal = await resolveInitProposal({
     cwd: options.cwd,
-    overrides: options.overrides,
   });
-  const summary = formatInitSummary(settings);
-  const { configInput, detected } = settings;
+  const summary = formatInitSummary(proposal);
+  const { configInput, detected } = {
+    ...finalizeInitProposal(proposal),
+    detected: proposal.detected,
+  };
   const resolvedDesignSystem =
     configInput.designSystem === detected.designSystem.library
       ? detected.designSystem
