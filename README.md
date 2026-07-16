@@ -11,6 +11,14 @@ npx threadline init
 
 `init` now follows the repo-first agent-native flow: it detects the repo shape, asks only about unresolved fields, shows the resolved proposal it is about to write, and then installs the pre-push hook so the first run already leaves the repo in a usable state.
 
+For fast local testing in another repo, build a real installable tarball from this workspace:
+
+```sh
+pnpm pack:local
+```
+
+The tarball is written to `packages/cli/.pack/` by default. Install that file into your test repo with `pnpm add -D /absolute/path/to/threadline-cli-1.0.0.tgz`.
+
 ## Why it exists
 
 UI work tends to split into two kinds of effort:

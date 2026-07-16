@@ -147,6 +147,7 @@ test('threadline init restarts when the repo changes before confirmation', async
         try {
           await writeFile(join(cwd, 'tailwind.config.ts'), 'export default {};\n');
           await rm(join(cwd, 'tailwind.config.js'));
+          await new Promise((resolve) => setTimeout(resolve, 25));
           child.stdin.write('confirm\n');
         } catch (error) {
           clearTimeout(timeout);

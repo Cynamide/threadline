@@ -27,6 +27,7 @@
   ],
   "scripts": {
     "build": "node --disable-warning=ExperimentalWarning scripts/build.mjs",
+    "pack:local": "node --disable-warning=ExperimentalWarning scripts/pack-local.mjs",
     "test": "npm run build && node --test test/*.test.mjs",
     "clean": "rm -rf dist"
   },

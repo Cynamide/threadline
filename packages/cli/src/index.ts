@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { realpathSync } from 'node:fs';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import type { DesignSystemLibrary, Framework, StylingStrategy } from './types.js';
@@ -313,6 +314,18 @@ function parsePort(value: string): number {
 }
 
 const entrypoint = fileURLToPath(new URL(import.meta.url));
-if (process.argv[1] === entrypoint) {
+if (isCliEntrypoint()) {
   process.exitCode = await run();
+}
+
+function isCliEntrypoint(): boolean {
+  try {
+    const argvPath = process.argv[1];
+    if (!argvPath) {
+      return false;
+    }
+    return realpathSync(argvPath) === realpathSync(entrypoint);
+  } catch {
+    return false;
+  }
 }
