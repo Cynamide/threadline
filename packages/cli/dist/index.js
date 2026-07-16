@@ -36,7 +36,29 @@ export async function run(argv           = process.argv.slice(2))               
         args.devCommand !== undefined ||
         args.port !== undefined;
 
-      if (!args.json && !hasInitFlags) {
+      if (args.preview) {
+        const result = await initProject({
+          cwd: args.cwd,
+          preview: true,
+          overrides: {
+            framework: args.framework,
+            styling: args.styling,
+            designSystem: args.designSystem,
+            srcPath: args.srcPath,
+            componentPath: args.componentPath,
+            devCommand: args.devCommand,
+            port: args.port,
+          },
+        });
+        if (args.json) {
+          process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+        } else {
+          process.stdout.write(`${result.summary}\n`);
+        }
+        return 0;
+      }
+
+      if (!hasInitFlags && !args.json) {
         const result = await runInteractiveInit({
           cwd: args.cwd,
           input: process.stdin,
@@ -49,9 +71,31 @@ export async function run(argv           = process.argv.slice(2))               
         return 0;
       }
 
+      if (hasInitFlags) {
+        const result = await runInteractiveInit({
+          cwd: args.cwd,
+          input: process.stdin,
+          output: process.stdout,
+          overrides: {
+            framework: args.framework,
+            styling: args.styling,
+            designSystem: args.designSystem,
+            srcPath: args.srcPath,
+            componentPath: args.componentPath,
+            devCommand: args.devCommand,
+            port: args.port,
+          },
+        });
+        if (!result) {
+          return 1;
+        }
+        process.stdout.write(`${formatInitResult(result)}\n`);
+        return 0;
+      }
+
       const result = await initProject({
         cwd: args.cwd,
-        preview: args.preview || args.json,
+        preview: false,
         overrides: {
           framework: args.framework,
           styling: args.styling,

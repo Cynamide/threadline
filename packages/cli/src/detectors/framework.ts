@@ -78,22 +78,23 @@ async function detectComponentPath(
   cwd: string,
   srcPath: string,
 ): Promise<{ value: string; detected: boolean }> {
-  const candidate = await firstExisting(cwd, [
-    join(srcPath, 'components/ui'),
-    join(srcPath, 'components'),
-    join(srcPath, 'ui'),
-  ]);
-
-  if (!candidate) {
+  if (await firstExisting(cwd, [join(srcPath, 'components/ui'), join(srcPath, 'components')])) {
     return {
       value: 'components',
-      detected: false,
+      detected: true,
+    };
+  }
+
+  if (await firstExisting(cwd, [join(srcPath, 'ui')])) {
+    return {
+      value: 'ui',
+      detected: true,
     };
   }
 
   return {
-    value: candidate.slice(srcPath.length + 1).replace(/\\/g, '/'),
-    detected: true,
+    value: 'components',
+    detected: false,
   };
 }
 

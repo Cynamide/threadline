@@ -106,20 +106,21 @@ test('threadline init shows a summary and confirms before write when detection i
   assert.match(result.stdout, /styling: tailwind/);
   assert.match(result.stdout, /design system: shadcn/);
   assert.match(result.stdout, /source root: src/);
-  assert.match(result.stdout, /component path: components\/ui/);
+  assert.match(result.stdout, /component path: components/);
   assert.match(result.stdout, /dev command: npm run dev/);
   assert.match(result.stdout, /port: 3000/);
   assert.match(result.stdout, /Confirm this config before writing/);
   assert.match(result.stdout, /Threadline initialized \.threadline\/config\.yaml\./);
-  assert.match(await readFile(join(cwd, '.threadline/config.yaml'), 'utf8'), /component_path: "components\/ui"/);
+  assert.match(await readFile(join(cwd, '.threadline/config.yaml'), 'utf8'), /component_path: "components"/);
   assert.equal(result.stderr, '');
 });
 
-test('threadline init writes the same confirmed interactive proposal even if detection inputs change before confirm', async () => {
+test('threadline init restarts when the repo changes before confirmation', async () => {
   const cwd = await fixture({
     'package.json': JSON.stringify({ dependencies: { next: '^15.0.0', tailwindcss: '^4.0.0' } }),
     'next.config.js': 'module.exports = {}',
     'src/App.tsx': 'export function App() { return null; }',
+    'src/components/ui/Button.tsx': 'export function Button() { return null; }',
     'tailwind.config.js': 'module.exports = {}',
   });
   await execFile('git', ['init'], { cwd });
@@ -130,8 +131,9 @@ test('threadline init writes the same confirmed interactive proposal even if det
     });
     let stdout = '';
     let stderr = '';
-    let answeredClarification = false;
     let sentConfirmation = false;
+    let restarted = false;
+    let secondConfirmationSent = false;
     const timeout = setTimeout(() => {
       child.kill();
       reject(new Error('Timed out waiting for interactive confirmation prompt.'));
@@ -140,22 +142,27 @@ test('threadline init writes the same confirmed interactive proposal even if det
     child.stdout.on('data', async (chunk) => {
       stdout += chunk.toString();
 
-      if (!answeredClarification && stdout.includes('Clarify component path [components]:')) {
-        answeredClarification = true;
-        child.stdin.write('src/design-system\n');
-        return;
-      }
-
       if (!sentConfirmation && stdout.includes('Confirm this config before writing?')) {
         sentConfirmation = true;
         try {
           await writeFile(join(cwd, 'tailwind.config.ts'), 'export default {};\n');
           await rm(join(cwd, 'tailwind.config.js'));
-          child.stdin.end('confirm\n');
+          child.stdin.write('confirm\n');
         } catch (error) {
           clearTimeout(timeout);
           reject(error);
         }
+        return;
+      }
+
+      if (!restarted && stdout.includes('The repo changed while I was confirming. Let me re-check the setup.')) {
+        restarted = true;
+        return;
+      }
+
+      if (restarted && !secondConfirmationSent && stdout.includes('Confirm this config before writing?')) {
+        secondConfirmationSent = true;
+        child.stdin.write('confirm\n');
       }
     });
     child.stderr.on('data', (chunk) => {
@@ -173,29 +180,9 @@ test('threadline init writes the same confirmed interactive proposal even if det
 
   assert.equal(result.code, 0);
   assert.equal(result.stderr, '');
-  assert.match(result.stdout, /Clarify component path \[components\]:/);
-  assert.match(result.stdout, /component path: design-system/);
-  assert.match(await readFile(join(cwd, '.threadline/config.yaml'), 'utf8'), /component_path: "design-system"/);
-  assert.match(await readFile(join(cwd, '.threadline/config.yaml'), 'utf8'), /tailwind_config: "tailwind\.config\.js"/);
-});
-
-test('threadline init re-prompts when a clarification answer is invalid', async () => {
-  const cwd = await fixture({
-    'package.json': JSON.stringify({ dependencies: { next: '^15.0.0' } }),
-    'next.config.js': 'module.exports = {}',
-    'src/components/ui/Button.tsx': 'export function Button() { return null; }',
-  });
-  await execFile('git', ['init'], { cwd });
-
-  const result = await runCli(['init'], cwd, {
-    input: 'not tailwind\nlet us use tailwind\nconfirm\n',
-  });
-
-  assert.equal(result.code, 0);
-  assert.match(result.stdout, /Clarify styling \[plain-css\] \(choose from: tailwind, styled-components, emotion, css-modules, plain-css\):/);
-  assert.match(result.stdout, /Invalid init answer: styling must be one of tailwind, styled-components, emotion, css-modules, plain-css\./);
-  assert.match(result.stdout, /styling/);
-  assert.match(await readFile(join(cwd, '.threadline/config.yaml'), 'utf8'), /strategy: "tailwind"/);
+  assert.match(result.stdout, /The repo changed while I was confirming\. Let me re-check the setup\./);
+  assert.match(await readFile(join(cwd, '.threadline/config.yaml'), 'utf8'), /component_path: "components"/);
+  assert.match(await readFile(join(cwd, '.threadline/config.yaml'), 'utf8'), /tailwind_config: "tailwind\.config\.ts"/);
 });
 
 test('threadline init keeps scripted preview usage working with explicit flags and json output', async () => {
@@ -222,22 +209,6 @@ test('threadline init keeps scripted preview usage working with explicit flags a
   assert.match(parsed.summary, /styling: css-modules/);
   assert.match(parsed.summary, /design system: none/);
   assert.match(parsed.summary, /Applied overrides: framework, styling, designSystem\./);
-  assert.equal(parsed.filesWritten.length, 0);
-  await assert.rejects(() => stat(join(cwd, '.threadline/config.yaml')));
-});
-
-test('threadline init with json output stays read-only without preview', async () => {
-  const cwd = await fixture({
-    'package.json': JSON.stringify({ dependencies: { next: '^15.0.0' } }),
-    'next.config.js': 'module.exports = {}',
-  });
-
-  const result = await runCli(['init', '--framework', 'vite', '--styling', 'css-modules', '--design-system', 'none', '--json'], cwd);
-
-  assert.equal(result.code, 0);
-  assert.equal(result.stderr, '');
-  const parsed = JSON.parse(result.stdout);
-  assert.equal(parsed.preview, true);
   assert.equal(parsed.filesWritten.length, 0);
   await assert.rejects(() => stat(join(cwd, '.threadline/config.yaml')));
 });

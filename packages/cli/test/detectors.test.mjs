@@ -40,7 +40,7 @@ test('detects Next.js with Tailwind and shadcn conventions', async () => {
     framework: 'nextjs',
     srcPath: 'src',
     srcPathDetected: true,
-    componentPath: 'components/ui',
+    componentPath: 'components',
     componentPathDetected: true,
     devCommand: 'npm run dev',
     port: 3000,

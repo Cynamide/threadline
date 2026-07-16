@@ -125,30 +125,41 @@ async function writeInitProject(
 }
 
 export async function runInteractiveInit(options: InteractiveInitOptions): Promise<InitResult | null> {
-  const proposal = await resolveInitProposal({
-    cwd: options.cwd,
-    overrides: options.overrides,
-  });
   const input = options.input ?? process.stdin;
   const output = options.output ?? process.stdout;
   const prompt = createPromptSession(input, output);
 
   try {
-    output.write(`${formatInitSummary(proposal)}\n`);
-    let clarified = proposal;
+    while (true) {
+      const proposal = await resolveInitProposal({
+        cwd: options.cwd,
+        overrides: options.overrides,
+      });
+      output.write(`${formatInitSummary(proposal)}\n`);
+      let clarified = proposal;
 
-    for (const field of proposal.uncertainFields) {
-      clarified = await promptForField(prompt, output, clarified, field);
+      for (const field of proposal.uncertainFields) {
+        clarified = await promptForField(prompt, output, clarified, field);
+      }
+
+      output.write(`\n${formatResolvedInitSummary(clarified)}\n`);
+      const confirmed = await promptForConfirmation(prompt, output);
+      if (!confirmed) {
+        output.write('Init cancelled. No files written.\n');
+        return null;
+      }
+
+      const freshProposal = await resolveInitProposal({
+        cwd: options.cwd,
+        overrides: options.overrides,
+      });
+      if (!sameConfigInput(clarified.resolved.configInput, freshProposal.resolved.configInput)) {
+        output.write('\nThe repo changed while I was confirming. Let me re-check the setup.\n');
+        continue;
+      }
+
+      return await writeInitProject(options.cwd, clarified, { preview: false });
     }
-
-    output.write(`\n${formatResolvedInitSummary(clarified)}\n`);
-    const confirmed = await promptForConfirmation(prompt, output);
-    if (!confirmed) {
-      output.write('Init cancelled. No files written.\n');
-      return null;
-    }
-
-    return await writeInitProject(options.cwd, clarified, { preview: false });
   } finally {
     prompt.close();
   }
@@ -186,6 +197,20 @@ function formatAppliedOverrides(overrides: InitOverrides | undefined): string {
   const applied = order.filter((key) => overrides[key] !== undefined);
   if (applied.length === 0) return '';
   return `Applied overrides: ${applied.join(', ')}.`;
+}
+
+function sameConfigInput(left: ReturnType<typeof finalizeInitProposal>['configInput'], right: ReturnType<typeof finalizeInitProposal>['configInput']): boolean {
+  return (
+    left.framework === right.framework &&
+    left.styling === right.styling &&
+    left.designSystem === right.designSystem &&
+    left.srcPath === right.srcPath &&
+    left.componentPath === right.componentPath &&
+    left.devCommand === right.devCommand &&
+    left.port === right.port &&
+    left.tailwindConfig === right.tailwindConfig &&
+    left.designSystemImportPath === right.designSystemImportPath
+  );
 }
 
 async function promptForField(
