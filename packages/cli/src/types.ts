@@ -5,7 +5,9 @@ export type DesignSystemLibrary = 'shadcn' | 'mui' | 'antd' | 'radix' | 'custom'
 export interface FrameworkDetection {
   framework: Framework;
   srcPath: string;
+  srcPathDetected: boolean;
   componentPath: string;
+  componentPathDetected: boolean;
   devCommand: string;
   port: number;
   reasons: string[];

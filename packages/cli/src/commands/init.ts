@@ -275,7 +275,25 @@ function createPromptSession(input: NodeJS.ReadableStream, output: NodeJS.Writab
 
 function buildFieldPrompt(field: InitProposalField, proposal: InitProposal): string {
   const configInput = finalizeInitProposal(proposal).configInput;
+  const choices = formatFieldChoices(field);
+  if (choices.length > 0) {
+    return `Clarify ${formatFieldLabel(field)} [${formatFieldValue(field, configInput)}] (choose from: ${choices.join(', ')}):`;
+  }
+
   return `Clarify ${formatFieldLabel(field)} [${formatFieldValue(field, configInput)}]:`;
+}
+
+function formatFieldChoices(field: InitProposalField): string[] {
+  switch (field) {
+    case 'framework':
+      return ['nextjs', 'vite', 'cra', 'remix', 'custom'];
+    case 'styling':
+      return ['tailwind', 'styled-components', 'emotion', 'css-modules', 'plain-css'];
+    case 'designSystem':
+      return ['shadcn', 'mui', 'antd', 'radix', 'custom', 'none'];
+    default:
+      return [];
+  }
 }
 
 function formatFieldLabel(field: InitProposalField): string {

@@ -68,7 +68,7 @@ export async function run(argv: string[] = process.argv.slice(2)): Promise<numbe
 
       const result = await initProject({
         cwd: args.cwd,
-        preview: args.preview,
+        preview: args.preview || args.json,
         overrides: {
           framework: args.framework,
           styling: args.styling,

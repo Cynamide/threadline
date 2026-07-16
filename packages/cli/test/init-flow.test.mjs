@@ -2,12 +2,14 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { buildInitProposal, clarifyInitProposal, formatResolvedInitSummary } from '../dist/commands/init-flow.js';
 
-test('buildInitProposal marks uncertain fields and keeps confident defaults', () => {
+test('buildInitProposal marks uncertain fields when the detector cannot infer the component root', () => {
   const proposal = buildInitProposal({
     framework: {
       framework: 'nextjs',
       srcPath: 'src',
+      srcPathDetected: true,
       componentPath: 'components',
+      componentPathDetected: false,
       devCommand: 'npm run dev',
       port: 3000,
       reasons: ['found Next.js dependency or config'],
@@ -33,7 +35,9 @@ test('clarifyInitProposal accepts a natural-language correction and validates it
       framework: {
         framework: 'nextjs',
         srcPath: 'src',
-        componentPath: 'components',
+        srcPathDetected: true,
+        componentPath: 'components/ui',
+        componentPathDetected: true,
         devCommand: 'npm run dev',
         port: 3000,
         reasons: ['found Next.js dependency or config'],
@@ -60,7 +64,9 @@ test('formatInitSummary shows an explicit ready-to-write proposal once uncertain
       framework: {
         framework: 'nextjs',
         srcPath: 'src',
-        componentPath: 'components',
+        srcPathDetected: true,
+        componentPath: 'components/ui',
+        componentPathDetected: true,
         devCommand: 'npm run dev',
         port: 3000,
         reasons: ['found Next.js dependency or config'],
@@ -103,7 +109,9 @@ test('clarifyInitProposal accepts an unambiguous natural-language enum correctio
       framework: {
         framework: 'custom',
         srcPath: 'src',
+        srcPathDetected: true,
         componentPath: 'components',
+        componentPathDetected: false,
         devCommand: 'npm run dev',
         port: 3000,
         reasons: ['fallback'],
@@ -128,15 +136,17 @@ test('clarifyInitProposal rejects ambiguous enum clarifications', () => {
   assert.throws(
     () =>
       clarifyInitProposal(
-        buildInitProposal({
-          framework: {
-            framework: 'nextjs',
-            srcPath: 'src',
-            componentPath: 'components',
-            devCommand: 'npm run dev',
-            port: 3000,
-            reasons: ['found Next.js dependency or config'],
-          },
+    buildInitProposal({
+      framework: {
+        framework: 'nextjs',
+        srcPath: 'src',
+        srcPathDetected: true,
+        componentPath: 'components',
+        componentPathDetected: false,
+        devCommand: 'npm run dev',
+        port: 3000,
+        reasons: ['found Next.js dependency or config'],
+      },
           styling: {
             strategy: 'tailwind',
             tailwindConfig: 'tailwind.config.ts',
@@ -157,15 +167,17 @@ test('clarifyInitProposal rejects negated natural-language enum clarifications',
   assert.throws(
     () =>
       clarifyInitProposal(
-        buildInitProposal({
-          framework: {
-            framework: 'nextjs',
-            srcPath: 'src',
-            componentPath: 'components',
-            devCommand: 'npm run dev',
-            port: 3000,
-            reasons: ['found Next.js dependency or config'],
-          },
+    buildInitProposal({
+      framework: {
+        framework: 'nextjs',
+        srcPath: 'src',
+        srcPathDetected: true,
+        componentPath: 'components',
+        componentPathDetected: false,
+        devCommand: 'npm run dev',
+        port: 3000,
+        reasons: ['found Next.js dependency or config'],
+      },
           styling: {
             strategy: 'plain-css',
             tailwindConfig: null,

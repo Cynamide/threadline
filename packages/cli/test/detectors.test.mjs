@@ -36,7 +36,16 @@ test('detects Next.js with Tailwind and shadcn conventions', async () => {
     'src/components/ui/button.tsx': 'export function Button() {}',
   });
 
-  assert.equal((await detectFramework(cwd)).framework, 'nextjs');
+  assert.deepEqual(await detectFramework(cwd), {
+    framework: 'nextjs',
+    srcPath: 'src',
+    srcPathDetected: true,
+    componentPath: 'components/ui',
+    componentPathDetected: true,
+    devCommand: 'npm run dev',
+    port: 3000,
+    reasons: ['found Next.js dependency or config'],
+  });
   assert.equal((await detectStyling(cwd)).strategy, 'tailwind');
   assert.deepEqual(await detectDesignSystem(cwd), {
     library: 'shadcn',
@@ -58,8 +67,26 @@ test('detects Vite styled-components and CRA CSS modules', async () => {
     'src/App.module.css': '.root {}',
   });
 
-  assert.equal((await detectFramework(vite)).framework, 'vite');
+  assert.deepEqual(await detectFramework(vite), {
+    framework: 'vite',
+    srcPath: 'src',
+    srcPathDetected: false,
+    componentPath: 'components',
+    componentPathDetected: false,
+    devCommand: 'npm run dev',
+    port: 5173,
+    reasons: ['found Vite dependency or config'],
+  });
   assert.equal((await detectStyling(vite)).strategy, 'styled-components');
-  assert.equal((await detectFramework(cra)).framework, 'cra');
+  assert.deepEqual(await detectFramework(cra), {
+    framework: 'cra',
+    srcPath: 'src',
+    srcPathDetected: true,
+    componentPath: 'components',
+    componentPathDetected: false,
+    devCommand: 'npm run dev',
+    port: 3000,
+    reasons: ['found react-scripts dependency'],
+  });
   assert.equal((await detectStyling(cra)).strategy, 'css-modules');
 });

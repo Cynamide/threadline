@@ -191,22 +191,11 @@ function inferUncertainFields(
   if (userAnswers.framework === undefined && configInput.framework === 'custom') uncertain.add('framework');
   if (userAnswers.styling === undefined && configInput.styling === 'plain-css') uncertain.add('styling');
   if (userAnswers.designSystem === undefined && configInput.designSystem === 'custom') uncertain.add('designSystem');
-  if (!configInput.srcPath || configInput.srcPath === '.') uncertain.add('srcPath');
-  if (shouldClarifyComponentPath(detected, configInput, userAnswers)) uncertain.add('componentPath');
+  if (userAnswers.srcPath === undefined && !detected.framework.srcPathDetected) uncertain.add('srcPath');
+  if (userAnswers.componentPath === undefined && !detected.framework.componentPathDetected) uncertain.add('componentPath');
   if (userAnswers.devCommand === undefined && !configInput.devCommand) uncertain.add('devCommand');
 
   return FIELD_ORDER.filter((field) => uncertain.has(field));
-}
-
-function shouldClarifyComponentPath(
-  detected: DetectedInitSettings,
-  configInput: ConfigInput,
-  userAnswers: Partial<Record<InitProposalField, string>>,
-): boolean {
-  if (userAnswers.componentPath !== undefined) return false;
-  if (configInput.componentPath === '.') return true;
-  if (detected.designSystem.library === 'shadcn') return true;
-  return false;
 }
 
 function buildConfidentValues(
