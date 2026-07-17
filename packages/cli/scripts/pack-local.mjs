@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { cp, mkdir, readFile, rm, writeFile, mkdtemp } from 'node:fs/promises';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { execFile as execFileCallback } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -24,6 +24,7 @@ try {
   await cp(join(packageRoot, 'dist'), join(stagingPackage, 'dist'), { recursive: true });
   await cp(join(packageRoot, 'SPEC.md'), join(stagingPackage, 'SPEC.md'));
   await cp(join(packageRoot, 'CONTEXT.md'), join(stagingPackage, 'CONTEXT.md'));
+  await cp(join(packageRoot, 'package.json'), join(stagingPackage, 'package.json'));
 
   await stagePackage(
     join(repoRoot, 'packages/ast-guard'),
@@ -56,13 +57,19 @@ try {
     join(stagingPackage, 'dist/vendor/@babel/helper-validator-identifier'),
   );
 
-  const packageJson = JSON.parse(await readFile(join(packageRoot, 'package.json'), 'utf8'));
-  packageJson.dependencies = {
-    ...packageJson.dependencies,
-    '@threadline/ast-guard': 'file:./dist/vendor/ast-guard',
-  };
-  await writeFile(join(stagingPackage, 'package.json'), `${JSON.stringify(packageJson, null, 2)}\n`);
+  await rewriteAstGuardImports(stagingPackage);
 
+  const packageJsonPath = join(stagingPackage, 'package.json');
+  const packageJson = JSON.parse(await readFile(packageJsonPath, 'utf8'));
+  if (packageJson.dependencies) {
+    delete packageJson.dependencies['@threadline/ast-guard'];
+  }
+  if (packageJson.dependencies && Object.keys(packageJson.dependencies).length === 0) {
+    delete packageJson.dependencies;
+  }
+  await writeFile(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
+
+  await rm(outputDir, { recursive: true, force: true });
   await mkdir(outputDir, { recursive: true });
   const { stdout } = await execFile('npm', ['pack', '--json', '--pack-destination', outputDir], {
     cwd: stagingPackage,
@@ -109,6 +116,32 @@ function rewriteDependencies(dependencies, dependencyRewrites) {
   return Object.fromEntries(
     Object.entries(dependencies).map(([name, version]) => [name, dependencyRewrites[name] ?? version]),
   );
+}
+
+async function rewriteAstGuardImports(stagingPackage) {
+  const distRoot = join(stagingPackage, 'dist');
+  const vendorEntry = join(distRoot, 'vendor/ast-guard/src/index.js');
+  for (const file of await listFiles(distRoot)) {
+    if (!file.endsWith('.js')) continue;
+    const source = await readFile(file, 'utf8');
+    if (!source.includes("@threadline/ast-guard")) continue;
+    const replacement = relative(dirname(file), vendorEntry).replace(/\\/g, '/');
+    await writeFile(file, source.replaceAll("@threadline/ast-guard", replacement));
+  }
+}
+
+async function listFiles(dir) {
+  const entries = await import('node:fs/promises').then((fs) => fs.readdir(dir, { withFileTypes: true }));
+  const files = [];
+  for (const entry of entries) {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...(await listFiles(path)));
+    } else if (entry.isFile()) {
+      files.push(path);
+    }
+  }
+  return files;
 }
 
 function resolveOutputDir(argv) {
