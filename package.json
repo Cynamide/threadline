@@ -10,6 +10,7 @@
     "test:coverage": "turbo run test:coverage",
     "lint": "turbo run lint",
     "pack:local": "pnpm --filter @threadline/cli pack:local",
+    "pack:packages": "mkdir -p /tmp/threadline-package-packs && pnpm -r --filter './packages/*' pack --pack-destination /tmp/threadline-package-packs",
     "clean": "turbo run clean && rm -rf node_modules",
     "changeset": "changeset",
     "version": "changeset version",
