@@ -6,7 +6,8 @@ Threadline is a small toolkit for teams that want to move fast on UI work withou
 
 ```sh
 pnpm add -D @threadline/cli
-npx threadline init
+pnpm add @threadline/runtime
+pnpm exec threadline init
 ```
 
 `init` now follows the repo-first agent-native flow: it detects the repo shape, asks only about unresolved fields, shows the resolved proposal it is about to write, and then installs the pre-push hook so the first run already leaves the repo in a usable state.
@@ -63,6 +64,12 @@ The default `threadline init` experience is:
 ## Code examples
 
 ### Mark deferred UI work
+
+Install the runtime package in any app code that uses `handoff()`:
+
+```sh
+pnpm add @threadline/runtime
+```
 
 ```ts
 import { handoff } from '@threadline/runtime';

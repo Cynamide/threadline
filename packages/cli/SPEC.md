@@ -86,7 +86,7 @@ It bridges the gap between the ideas in the docs and the day-to-day workflow: se
 4. Run `threadline export-handoffs --tracker github` when you want GitHub-shaped payloads, or `--tracker linear` for the Linear example adapter.
 5. Run `threadline install-hooks` if you want validation enforced automatically by git.
 
-## Files to implement
+## Implementation Surface
 
 - `src/index.ts`
 - `src/commands/init.ts`

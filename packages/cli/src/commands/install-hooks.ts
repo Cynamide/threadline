@@ -16,7 +16,11 @@ const hookHeader = '#!/bin/sh';
 const managedBlockStart = '# threadline managed block start';
 const managedBlockEnd = '# threadline managed block end';
 const managedBlock = `${managedBlockStart}
-threadline validate
+if [ -x "./node_modules/.bin/threadline" ]; then
+  ./node_modules/.bin/threadline validate
+else
+  threadline validate
+fi
 ${managedBlockEnd}`;
 const hookBody = `${hookHeader}
 ${managedBlock}

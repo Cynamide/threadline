@@ -78,7 +78,7 @@ Validation should return structured violations with:
 3. It reports errors and warnings with file locations and stable codes.
 4. The caller decides whether to print the result, fail a hook, or export it elsewhere.
 
-## Files to implement
+## Implementation Surface
 
 - `src/parsers/handoff.js`
 - `src/parsers/styling.js`

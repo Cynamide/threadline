@@ -276,6 +276,31 @@ test('validateStateBoundaries honors whitelisted imports for matching state rule
   assert.deepEqual(violations, []);
 });
 
+test('validateStateBoundaries detects browser state access through global objects', () => {
+  const source = [
+    'export function ProfileCard() {',
+    '  window.fetch("/api/profile");',
+    "  window.localStorage.setItem('profile', 'ready');",
+    "  globalThis.sessionStorage.getItem('profile');",
+    '  return null;',
+    '}',
+  ].join('\n');
+
+  const violations = validateStateBoundaries(source, 'src/components/ProfileCard.tsx', {
+    project: { src_path: 'src', component_path: 'components' },
+    boundaries: { whitelisted_components: [] },
+  });
+
+  assert.deepEqual(
+    violations.map(({ code, line, column }) => ({ code, line, column })),
+    [
+      { code: 'STATE001', line: 2, column: 3 },
+      { code: 'STATE006', line: 3, column: 3 },
+      { code: 'STATE006', line: 4, column: 3 },
+    ],
+  );
+});
+
 test('detectForbiddenImports reports configured import names unless whitelisted', () => {
   const source = [
     "import axios from 'axios';",
@@ -431,6 +456,27 @@ test('validateStylingScope still reports className violations', () => {
       message: 'Replace "my-custom-button" with configured Tailwind utility classes.',
     },
   ]);
+});
+
+test('validateStylingScope reports inline styles and mixed css-module literals', () => {
+  const inlineViolations = validateStylingScope(
+    '<button style={{ color: "red" }}>Save</button>',
+    'src/components/Button.tsx',
+    'tailwind',
+  );
+  const mixedCssModuleViolations = validateStylingScope(
+    '<button className={isActive ? styles.active : "primary"}>Save</button>',
+    'src/components/Button.tsx',
+    'css-modules',
+  );
+
+  assert.deepEqual(inlineViolations.map(({ code, message }) => ({ code, message })), [
+    {
+      code: 'STYLE002',
+      message: 'Move inline styles into the configured styling strategy.',
+    },
+  ]);
+  assert.deepEqual(mixedCssModuleViolations.map(({ code }) => code), ['STYLE002']);
 });
 
 test('validateStylingScope ignores plain JavaScript className variables', () => {

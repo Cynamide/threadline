@@ -44,6 +44,7 @@
     "url": "https://github.com/Cynamide/threadline",
     "directory": "packages/cli"
   },
+  "author": "Cynamide",
   "license": "MIT",
   "publishConfig": {
     "access": "public"

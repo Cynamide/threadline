@@ -349,6 +349,65 @@ design_system:
   assert.equal(result.filesChecked[0], 'src/staged.ts');
 });
 
+test('validate --staged reads the git index instead of the working tree', async () => {
+  const cwd = await fixture({
+    '.threadline/config.yaml': `version: "1.0"
+project:
+  framework: vite
+  src_path: src
+  component_path: components
+  extensions:
+    - .ts
+dev:
+  run_command: npm run dev
+  port: 5173
+  startup_timeout: 10000
+styling:
+  strategy: css-modules
+  enforce_scoping: true
+  tailwind_config: ""
+git:
+  branch_prefix: design/
+  commit_style: conventional
+  squash_merge: true
+  pr_title_format: "ui: {description}"
+handoff:
+  create_issues: true
+  status_on_create: Backlog
+  status_on_merge: Ready
+  default_assignee: null
+  team_id: null
+boundaries:
+  forbidden_imports:
+    - axios
+  forbidden_paths: []
+  whitelisted_imports: []
+  whitelisted_components: []
+validation:
+  pre_push: true
+  pre_commit: false
+  auto_fix: true
+  max_warnings: 0
+design_system:
+  library: none
+  import_path: ""
+  allow_new_primitives: false
+  component_aliases:
+    Button: PrimaryButton
+`,
+    'src/components/Button.ts': "import axios from 'axios';\nexport const Button = null;\n",
+  });
+  await execFile('git', ['init'], { cwd });
+  await execFile('git', ['add', 'src/components/Button.ts', '.threadline/config.yaml'], { cwd });
+  await writeFile(join(cwd, 'src/components/Button.ts'), 'export const Button = null;\n');
+
+  const result = await validateProject({ cwd, staged: true });
+
+  assert.equal(result.valid, false);
+  assert.deepEqual(result.violations.map((violation) => violation.rule), ['STATE002']);
+});
+
+
 test('loadConfig rejects invalid config values', async () => {
   const cwd = await fixture({
     '.threadline/config.yaml': `version: "1.0"
@@ -823,7 +882,7 @@ design_system:
   await execFile('git', ['add', 'src/bad.ts', '.threadline/config.yaml'], { cwd });
   await execFile('git', ['commit', '-m', 'add invalid code', '--no-verify'], { cwd });
 
-  const binDir = join(cwd, '.tmp-bin');
+  const binDir = join(cwd, 'node_modules/.bin');
   await mkdir(binDir, { recursive: true });
   await writeFile(
     join(binDir, 'threadline'),
@@ -837,13 +896,7 @@ exec node ${join(process.cwd(), 'dist/index.js')} "$@"
     execFile(
       join(cwd, '.git/hooks/pre-push'),
       ['origin', 'https://example.com'],
-      {
-        cwd,
-        env: {
-          ...process.env,
-          PATH: `${binDir}:${process.env.PATH ?? ''}`,
-        },
-      },
+      { cwd },
     ),
   );
 });

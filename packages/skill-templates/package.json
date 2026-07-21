@@ -21,6 +21,7 @@
     "url": "https://github.com/Cynamide/threadline",
     "directory": "packages/skill-templates"
   },
+  "author": "Cynamide",
   "license": "MIT",
   "publishConfig": {
     "access": "public"

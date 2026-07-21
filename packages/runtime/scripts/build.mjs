@@ -10,8 +10,10 @@ const require = createRequire(import.meta.url);
 const packageRoot = resolve(import.meta.dirname, '..');
 const sourceRoot = join(packageRoot, 'src');
 const outputRoot = join(packageRoot, 'dist');
+const tsBuildInfoPath = join(packageRoot, 'tsconfig.tsbuildinfo');
 
 await rm(outputRoot, { recursive: true, force: true });
+await rm(tsBuildInfoPath, { force: true });
 
 await buildDirectory(sourceRoot);
 await emitDeclarations();
@@ -62,4 +64,9 @@ async function emitDeclarations() {
     ],
     { cwd: packageRoot },
   );
+
+  const declarations = await readdir(outputRoot);
+  if (!declarations.some((entry) => entry.endsWith('.d.ts'))) {
+    throw new Error('Runtime build did not emit TypeScript declarations.');
+  }
 }

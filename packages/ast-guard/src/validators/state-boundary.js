@@ -83,18 +83,16 @@ function matchStateRule(node, rule) {
 }
 
 function isCallToIdentifier(node, identifier) {
-  return (
-    (node.type === 'CallExpression' || node.type === 'OptionalCallExpression') &&
-    node.callee?.type === 'Identifier' &&
-    node.callee.name === identifier
-  );
+  if (node.type !== 'CallExpression' && node.type !== 'OptionalCallExpression') return false;
+  if (node.callee?.type === 'Identifier') return node.callee.name === identifier;
+  return isGlobalMember(node.callee, identifier);
 }
 
 function isMemberOnIdentifier(node, identifier) {
+  if (node.type !== 'MemberExpression' && node.type !== 'OptionalMemberExpression') return false;
   return (
-    (node.type === 'MemberExpression' || node.type === 'OptionalMemberExpression') &&
-    node.object?.type === 'Identifier' &&
-    node.object.name === identifier
+    (node.object?.type === 'Identifier' && node.object.name === identifier) ||
+    isGlobalMember(node, identifier)
   );
 }
 
@@ -107,5 +105,15 @@ function isCallToMember(node, objectName, propertyName) {
     callee.object.name === objectName &&
     callee.property?.type === 'Identifier' &&
     callee.property.name === propertyName
+  );
+}
+
+function isGlobalMember(node, propertyName) {
+  return (
+    (node?.type === 'MemberExpression' || node?.type === 'OptionalMemberExpression') &&
+    node.object?.type === 'Identifier' &&
+    (node.object.name === 'window' || node.object.name === 'globalThis') &&
+    node.property?.type === 'Identifier' &&
+    node.property.name === propertyName
   );
 }

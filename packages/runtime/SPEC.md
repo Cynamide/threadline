@@ -72,7 +72,7 @@ function SettingsToolbar() {
 - The fallback should be safe to run locally because it may execute in development and production
 - A successful fallback result is returned unchanged; only failures are softened to `undefined`
 
-## Files to implement
+## Implementation Surface
 
 - `src/types.ts`
 - `src/handoff.ts`

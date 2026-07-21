@@ -6,7 +6,10 @@ Threadline CLI sets up a React repo for local handoff validation. It detects the
 
 ```sh
 pnpm add -D @threadline/cli
+pnpm add @threadline/runtime
 ```
+
+The CLI sets up and validates the repo. The runtime package provides the `handoff()` API used by app code.
 
 ## Initialize
 

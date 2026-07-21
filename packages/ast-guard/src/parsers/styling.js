@@ -144,9 +144,23 @@ export function validateStylingScope(source, filePath, strategy) {
   const violations = [];
 
   walkAst(ast, (node) => {
-    if (node.type !== 'JSXAttribute' || node.name?.type !== 'JSXIdentifier' || node.name.name !== 'className') {
+    if (node.type !== 'JSXAttribute' || node.name?.type !== 'JSXIdentifier') {
       return;
     }
+
+    if (node.name.name === 'style') {
+      violations.push(
+        styleViolation(
+          source,
+          filePath,
+          node.name.start ?? node.start ?? 0,
+          'Move inline styles into the configured styling strategy.',
+        ),
+      );
+      return;
+    }
+
+    if (node.name.name !== 'className') return;
 
     const value = node.value;
     if (!value) return;
@@ -164,7 +178,10 @@ export function validateStylingScope(source, filePath, strategy) {
         return;
       }
 
-      if (value.type === 'JSXExpressionContainer' && !containsStylesReference(value.expression)) {
+      if (
+        value.type === 'JSXExpressionContainer' &&
+        (!containsStylesReference(value.expression) || containsStaticClassLiteral(value.expression))
+      ) {
         violations.push(
           styleViolation(
             source,
@@ -262,6 +279,41 @@ function containsStylesReference(node) {
       (current.type === 'MemberExpression' || current.type === 'OptionalMemberExpression') &&
       current.object?.type === 'Identifier' &&
       current.object.name === 'styles'
+    ) {
+      found = true;
+      return;
+    }
+
+    for (const [key, value] of Object.entries(current)) {
+      if (key === 'loc' || key === 'start' || key === 'end' || key === 'range' || key === 'extra') continue;
+      visit(value);
+    }
+  }
+}
+
+function containsStaticClassLiteral(node) {
+  let found = false;
+
+  visit(node);
+  return found;
+
+  function visit(current) {
+    if (!current || typeof current !== 'object' || found) return;
+
+    if (Array.isArray(current)) {
+      for (const item of current) visit(item);
+      return;
+    }
+
+    if (current.type === 'StringLiteral' && current.value.trim()) {
+      found = true;
+      return;
+    }
+
+    if (
+      current.type === 'TemplateLiteral' &&
+      current.expressions.length === 0 &&
+      current.quasis.some((quasi) => (quasi.value.cooked ?? quasi.value.raw).trim())
     ) {
       found = true;
       return;

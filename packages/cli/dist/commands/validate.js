@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { runValidation as runAstValidation } from '@threadline/ast-guard';
 import { loadConfig } from '../utils/config.js';
 import { exists, findFiles } from '../utils/fs.js';
-import { stagedFiles } from '../utils/git.js';
+import { git, stagedFiles } from '../utils/git.js';
 
 export async function validateProject(options                 )                          {
   const config = await loadConfig(options.cwd);
@@ -11,7 +11,7 @@ export async function validateProject(options                 )                 
   const fileEntries = await Promise.all(
     files.map(async (filePath) => ({
       filePath,
-      source: await readSource(options.cwd, filePath),
+      source: await readSource(options.cwd, filePath, Boolean(options.staged)),
     })),
   );
 
@@ -75,7 +75,16 @@ async function filesToValidate(cwd        , config                  , staged    
     .sort();
 }
 
-async function readSource(cwd        , filePath        )                  {
+async function readSource(cwd        , filePath        , staged         )                  {
+  if (staged) {
+    try {
+      const { stdout } = await git(['show', `:${filePath}`], cwd);
+      return stdout;
+    } catch {
+      return '';
+    }
+  }
+
   if (await exists(join(cwd, filePath))) {
     return readFile(join(cwd, filePath), 'utf8');
   }
