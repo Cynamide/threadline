@@ -64,7 +64,9 @@ async function runCli(args, cwd, options = {}) {
       resolve({ code: code ?? 1, stdout, stderr });
     });
 
-    child.stdin.end(options.input);
+    setImmediate(() => {
+      child.stdin.end(options.input);
+    });
   });
 }
 
@@ -78,11 +80,15 @@ test('init writes threadline config files and installs pre-push hook', async () 
   const result = await initProject({ cwd });
 
   assert.equal(result.configPath, '.threadline/config.yaml');
-  assert.equal(result.filesWritten.length, 4);
+  assert.equal(result.filesWritten.length, 7);
   assert.equal(result.hook.installed, true);
   assert.match(await readFile(join(cwd, '.threadline/config.yaml'), 'utf8'), /framework: "nextjs"/);
-  assert.match(await readFile(join(cwd, '.threadline/skill.md'), 'utf8'), /# Base Skill/);
-  assert.match(await readFile(join(cwd, '.git/hooks/pre-push'), 'utf8'), /threadline validate --staged/);
+  assert.match(await readFile(join(cwd, '.codex/skills/threadline/SKILL.md'), 'utf8'), /# Base Skill/);
+  assert.match(await readFile(join(cwd, 'AGENTS.md'), 'utf8'), /\.codex\/skills\/threadline\/SKILL\.md/);
+  assert.match(await readFile(join(cwd, 'CLAUDE.md'), 'utf8'), /\.codex\/skills\/threadline\/SKILL\.md/);
+  assert.match(await readFile(join(cwd, '.cursor/rules/threadline.mdc'), 'utf8'), /alwaysApply: true/);
+  assert.match(await readFile(join(cwd, '.git/hooks/pre-push'), 'utf8'), /threadline validate/);
+  assert.doesNotMatch(await readFile(join(cwd, '.git/hooks/pre-push'), 'utf8'), /--staged/);
 });
 
 test('threadline init shows a summary and confirms before write when detection is confident', async () => {
@@ -186,31 +192,32 @@ test('threadline init restarts when the repo changes before confirmation', async
   assert.match(await readFile(join(cwd, '.threadline/config.yaml'), 'utf8'), /tailwind_config: "tailwind\.config\.ts"/);
 });
 
-test('threadline init keeps scripted preview usage working with explicit flags and json output', async () => {
+test('threadline init rejects preview and override flags', async () => {
   const cwd = await fixture({
     'package.json': JSON.stringify({ dependencies: { next: '^15.0.0' } }),
     'next.config.js': 'module.exports = {}',
   });
 
-  const result = await runCli(
-    ['init', '--preview', '--framework', 'vite', '--styling', 'css-modules', '--design-system', 'none', '--json'],
-    cwd,
-  );
+  const preview = await runCli(['init', '--preview'], cwd);
+  const override = await runCli(['init', '--framework', 'vite'], cwd);
 
-  assert.equal(result.code, 0);
-  assert.equal(result.stderr, '');
-  assert.doesNotMatch(result.stdout, /Confirm this config before writing/);
+  assert.equal(preview.code, 1);
+  assert.match(preview.stderr, /Unknown flag "--preview"/);
+  assert.equal(override.code, 1);
+  assert.match(override.stderr, /Unknown flag "--framework"/);
+  await assert.rejects(() => stat(join(cwd, '.threadline/config.yaml')));
+});
 
-  const parsed = JSON.parse(result.stdout);
-  assert.equal(parsed.preview, true);
-  assert.equal(parsed.detected.framework, 'nextjs');
-  assert.match(parsed.summary, /Detected: nextjs, plain-css, none/);
-  assert.match(parsed.summary, /Proposed config:/);
-  assert.match(parsed.summary, /framework: vite/);
-  assert.match(parsed.summary, /styling: css-modules/);
-  assert.match(parsed.summary, /design system: none/);
-  assert.match(parsed.summary, /Applied overrides: framework, styling, designSystem\./);
-  assert.equal(parsed.filesWritten.length, 0);
+test('threadline init rejects json because init requires interactive confirmation', async () => {
+  const cwd = await fixture({
+    'package.json': JSON.stringify({ dependencies: { next: '^15.0.0' } }),
+    'next.config.js': 'module.exports = {}',
+  });
+
+  const result = await runCli(['init', '--json'], cwd);
+
+  assert.equal(result.code, 1);
+  assert.match(result.stderr, /threadline init requires interactive confirmation and does not support --json/);
   await assert.rejects(() => stat(join(cwd, '.threadline/config.yaml')));
 });
 
@@ -539,6 +546,31 @@ export function Settings() {
   });
 });
 
+test('export-handoffs text output includes PR-ready summary details', async () => {
+  const cwd = await fixture({
+    'src/components/Settings.tsx': `${'\n'.repeat(8)}import { handoff } from '@threadline/runtime';
+
+export function Settings() {
+  return handoff({
+    id: 'export-data',
+    title: 'Export Data',
+    description: 'Trigger CSV export of the current table view',
+    fallback: () => null,
+  });
+}
+`,
+  });
+
+  const result = await runCli(['export-handoffs', '--tracker', 'github'], cwd);
+
+  assert.equal(result.code, 0);
+  assert.match(result.stdout, /Tracker: github/);
+  assert.match(result.stdout, /Handoffs found: 1/);
+  assert.match(result.stdout, /src\/components\/Settings\.tsx:12/);
+  assert.match(result.stdout, /Handoff: Export Data/);
+  assert.match(result.stdout, /Trigger CSV export of the current table view/);
+});
+
 test('export-handoffs converts canonical records into Linear payloads', async () => {
   const cwd = await fixture({
     'src/components/Settings.tsx': `${'\n'.repeat(38)}import { handoff } from '@threadline/runtime';
@@ -716,11 +748,27 @@ test('install-hooks writes an executable pre-push hook idempotently', async () =
   const hookPath = join(cwd, '.git/hooks/pre-push');
 
   assert.equal(second.installed, true);
-  assert.match(await readFile(hookPath, 'utf8'), /threadline validate --staged/);
+  assert.match(await readFile(hookPath, 'utf8'), /threadline validate/);
+  assert.doesNotMatch(await readFile(hookPath, 'utf8'), /--staged/);
   assert.equal((await stat(hookPath)).mode & 0o111, 0o111);
 });
 
-test('pre-push hook blocks invalid staged code', async () => {
+test('install-hooks preserves existing hook content', async () => {
+  const cwd = await fixture();
+  await execFile('git', ['init'], { cwd });
+  const hookPath = join(cwd, '.git/hooks/pre-push');
+  await writeFile(hookPath, '#!/bin/sh\necho existing-check\n');
+
+  const result = await installHooks({ cwd });
+  const hook = await readFile(hookPath, 'utf8');
+
+  assert.equal(result.installed, true);
+  assert.equal(result.updated, true);
+  assert.match(hook, /echo existing-check/);
+  assert.match(hook, /threadline validate/);
+});
+
+test('pre-push hook blocks invalid committed code', async () => {
   const cwd = await fixture({
     '.threadline/config.yaml': `version: "1.0"
 project:
@@ -769,8 +817,11 @@ design_system:
     'src/bad.ts': "import axios from 'axios';\n",
   });
   await execFile('git', ['init'], { cwd });
+  await execFile('git', ['config', 'user.email', 'test@example.com'], { cwd });
+  await execFile('git', ['config', 'user.name', 'Test User'], { cwd });
   await installHooks({ cwd });
   await execFile('git', ['add', 'src/bad.ts', '.threadline/config.yaml'], { cwd });
+  await execFile('git', ['commit', '-m', 'add invalid code', '--no-verify'], { cwd });
 
   const binDir = join(cwd, '.tmp-bin');
   await mkdir(binDir, { recursive: true });

@@ -1,7 +1,12 @@
 import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, resolve } from 'node:path';
 import { stripTypeScriptTypes } from 'node:module';
+import { execFile as execFileCallback } from 'node:child_process';
+import { promisify } from 'node:util';
+import { createRequire } from 'node:module';
 
+const execFile = promisify(execFileCallback);
+const require = createRequire(import.meta.url);
 const packageRoot = resolve(import.meta.dirname, '..');
 const sourceRoot = join(packageRoot, 'src');
 const outputRoot = join(packageRoot, 'dist');
@@ -9,6 +14,7 @@ const outputRoot = join(packageRoot, 'dist');
 await rm(outputRoot, { recursive: true, force: true });
 
 await buildDirectory(sourceRoot);
+await emitDeclarations();
 
 async function buildDirectory(directoryPath) {
   const entries = await readdir(directoryPath, { withFileTypes: true });
@@ -41,5 +47,19 @@ function rewriteLocalTypeScriptSpecifiers(source) {
   return source.replace(
     /((?:import|export)\s+(?:type\s+)?(?:[^'"]*?\s+from\s+)?['"])(\.{1,2}\/[^'"]+)\.ts(['"])/gu,
     '$1$2.js$3',
+  );
+}
+
+async function emitDeclarations() {
+  await execFile(
+    process.execPath,
+    [
+      require.resolve('typescript/bin/tsc'),
+      '-p',
+      'tsconfig.json',
+      '--emitDeclarationOnly',
+      '--allowImportingTsExtensions',
+    ],
+    { cwd: packageRoot },
   );
 }

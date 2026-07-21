@@ -2,8 +2,7 @@
 import { realpathSync } from 'node:fs';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
-import type { DesignSystemLibrary, Framework, StylingStrategy } from './types.js';
-import { initProject, runInteractiveInit, formatInitResult } from './commands/init.js';
+import { runInteractiveInit, formatInitResult } from './commands/init.js';
 import { validateProject, formatValidateResult } from './commands/validate.js';
 import { scanHandoffs, formatScanHandoffsResult } from './commands/scan-handoffs.js';
 import { installHooks, formatInstallHooksResult } from './commands/install-hooks.js';
@@ -21,20 +20,8 @@ interface ParsedArgs {
   json: boolean;
   help: boolean;
   staged: boolean;
-  preview: boolean;
   tracker: 'github' | 'linear';
-  framework?: Framework;
-  styling?: StylingStrategy;
-  designSystem?: DesignSystemLibrary;
-  srcPath?: string;
-  componentPath?: string;
-  devCommand?: string;
-  port?: number;
 }
-
-const frameworkValues = ['nextjs', 'vite', 'cra', 'remix', 'custom'] as const;
-const stylingValues = ['tailwind', 'styled-components', 'emotion', 'css-modules', 'plain-css'] as const;
-const designSystemValues = ['shadcn', 'mui', 'antd', 'radix', 'custom', 'none'] as const;
 
 export async function run(argv: string[] = process.argv.slice(2)): Promise<number> {
   try {
@@ -44,91 +31,19 @@ export async function run(argv: string[] = process.argv.slice(2)): Promise<numbe
       return args.help ? 0 : 1;
     }
     if (args.command === 'init') {
-      const hasInitFlags =
-        args.preview ||
-        args.framework !== undefined ||
-        args.styling !== undefined ||
-        args.designSystem !== undefined ||
-        args.srcPath !== undefined ||
-        args.componentPath !== undefined ||
-        args.devCommand !== undefined ||
-        args.port !== undefined;
-
-      if (args.preview) {
-        const result = await initProject({
-          cwd: args.cwd,
-          preview: true,
-          overrides: {
-            framework: args.framework,
-            styling: args.styling,
-            designSystem: args.designSystem,
-            srcPath: args.srcPath,
-            componentPath: args.componentPath,
-            devCommand: args.devCommand,
-            port: args.port,
-          },
-        });
-        if (args.json) {
-          process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
-        } else {
-          process.stdout.write(`${result.summary}\n`);
-        }
-        return 0;
-      }
-
-      if (!hasInitFlags && !args.json) {
-        const result = await runInteractiveInit({
-          cwd: args.cwd,
-          input: process.stdin,
-          output: process.stdout,
-        });
-        if (!result) {
-          return 1;
-        }
-        process.stdout.write(`${formatInitResult(result)}\n`);
-        return 0;
-      }
-
-      if (hasInitFlags) {
-        const result = await runInteractiveInit({
-          cwd: args.cwd,
-          input: process.stdin,
-          output: process.stdout,
-          overrides: {
-            framework: args.framework,
-            styling: args.styling,
-            designSystem: args.designSystem,
-            srcPath: args.srcPath,
-            componentPath: args.componentPath,
-            devCommand: args.devCommand,
-            port: args.port,
-          },
-        });
-        if (!result) {
-          return 1;
-        }
-        process.stdout.write(`${formatInitResult(result)}\n`);
-        return 0;
-      }
-
-      const result = await initProject({
-        cwd: args.cwd,
-        preview: false,
-        overrides: {
-          framework: args.framework,
-          styling: args.styling,
-          designSystem: args.designSystem,
-          srcPath: args.srcPath,
-          componentPath: args.componentPath,
-          devCommand: args.devCommand,
-          port: args.port,
-        },
-      });
       if (args.json) {
-        process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
-      } else {
-        process.stdout.write(`${result.summary}\n`);
+        throw new Error('threadline init requires interactive confirmation and does not support --json.');
       }
+
+      const result = await runInteractiveInit({
+        cwd: args.cwd,
+        input: process.stdin,
+        output: process.stdout,
+      });
+      if (!result) {
+        return 1;
+      }
+      process.stdout.write(`${formatInitResult(result)}\n`);
       return 0;
     }
     if (args.command === 'validate') {
@@ -180,15 +95,7 @@ function parseArgs(argv: string[]): ParsedArgs {
   let json = false;
   let help = false;
   let staged = false;
-  let preview = false;
   let tracker: 'github' | 'linear' = 'github';
-  let framework: Framework | undefined;
-  let styling: StylingStrategy | undefined;
-  let designSystem: DesignSystemLibrary | undefined;
-  let srcPath: string | undefined;
-  let componentPath: string | undefined;
-  let devCommand: string | undefined;
-  let port: number | undefined;
 
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -201,33 +108,10 @@ function parseArgs(argv: string[]): ParsedArgs {
       }
       cwd = next;
       index += 1;
-    } else if (arg === '--framework') {
-      framework = parseEnumValue(arg, readValue(argv, index, '--framework'), frameworkValues);
-      index += 1;
-    } else if (arg === '--styling') {
-      styling = parseEnumValue(arg, readValue(argv, index, '--styling'), stylingValues);
-      index += 1;
-    } else if (arg === '--design-system') {
-      designSystem = parseEnumValue(arg, readValue(argv, index, '--design-system'), designSystemValues);
-      index += 1;
-    } else if (arg === '--src-path') {
-      srcPath = readValue(argv, index, '--src-path');
-      index += 1;
-    } else if (arg === '--component-path') {
-      componentPath = readValue(argv, index, '--component-path');
-      index += 1;
-    } else if (arg === '--dev-command') {
-      devCommand = readValue(argv, index, '--dev-command');
-      index += 1;
-    } else if (arg === '--port') {
-      port = parsePort(readValue(argv, index, '--port'));
-      index += 1;
     } else if (arg === '--json') {
       json = true;
     } else if (arg === '--staged') {
       staged = true;
-    } else if (arg === '--preview') {
-      preview = true;
     } else if (arg === '--tracker') {
       const next = readValue(argv, index, '--tracker', 'Use github or linear.');
       if (next === 'github' || next === 'linear') {
@@ -251,15 +135,7 @@ function parseArgs(argv: string[]): ParsedArgs {
     json,
     help,
     staged,
-    preview,
     tracker,
-    framework,
-    styling,
-    designSystem,
-    srcPath,
-    componentPath,
-    devCommand,
-    port,
   };
 }
 
@@ -296,21 +172,6 @@ function readValue(argv: string[], index: number, flag: string, hint?: string): 
     throw new Error(`Missing value for ${flag}.${suffix}`);
   }
   return next;
-}
-
-function parseEnumValue<const T extends readonly string[]>(flag: string, value: string, allowed: T): T[number] {
-  if (allowed.includes(value)) {
-    return value;
-  }
-  throw new Error(`Invalid value for ${flag}: "${value}". Use ${allowed.join(', ')}.`);
-}
-
-function parsePort(value: string): number {
-  const port = Number(value);
-  if (!Number.isInteger(port) || port <= 0) {
-    throw new Error(`Invalid value for --port: "${value}". Use a positive integer.`);
-  }
-  return port;
 }
 
 const entrypoint = fileURLToPath(new URL(import.meta.url));

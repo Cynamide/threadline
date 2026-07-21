@@ -56,13 +56,19 @@ try {
     join(repoRoot, 'packages/ast-guard/node_modules/@babel/helper-validator-identifier'),
     join(stagingPackage, 'dist/vendor/@babel/helper-validator-identifier'),
   );
+  await stagePackage(
+    join(packageRoot, 'node_modules/yaml'),
+    join(stagingPackage, 'dist/vendor/yaml'),
+  );
 
   await rewriteAstGuardImports(stagingPackage);
+  await rewriteVendoredDependencyImports(stagingPackage);
 
   const packageJsonPath = join(stagingPackage, 'package.json');
   const packageJson = JSON.parse(await readFile(packageJsonPath, 'utf8'));
   if (packageJson.dependencies) {
     delete packageJson.dependencies['@threadline/ast-guard'];
+    delete packageJson.dependencies.yaml;
   }
   if (packageJson.dependencies && Object.keys(packageJson.dependencies).length === 0) {
     delete packageJson.dependencies;
@@ -99,7 +105,7 @@ async function runBuild() {
 
 async function stagePackage(sourceDir, targetDir, dependencyRewrites = {}) {
   await mkdir(dirname(targetDir), { recursive: true });
-  await cp(sourceDir, targetDir, { recursive: true });
+  await cp(sourceDir, targetDir, { recursive: true, dereference: true });
 
   const packageJsonPath = join(targetDir, 'package.json');
   const packageJson = JSON.parse(await readFile(packageJsonPath, 'utf8'));
@@ -127,6 +133,37 @@ async function rewriteAstGuardImports(stagingPackage) {
     if (!source.includes("@threadline/ast-guard")) continue;
     const replacement = relative(dirname(file), vendorEntry).replace(/\\/g, '/');
     await writeFile(file, source.replaceAll("@threadline/ast-guard", replacement));
+  }
+}
+
+async function rewriteVendoredDependencyImports(stagingPackage) {
+  const distRoot = join(stagingPackage, 'dist');
+  const rewrites = new Map([
+    ['@babel/parser', join(distRoot, 'vendor/@babel/parser/lib/index.js')],
+    ['@babel/types', join(distRoot, 'vendor/@babel/types/lib/index.js')],
+    ['@babel/helper-string-parser', join(distRoot, 'vendor/@babel/helper-string-parser/lib/index.js')],
+    [
+      '@babel/helper-validator-identifier',
+      join(distRoot, 'vendor/@babel/helper-validator-identifier/lib/index.js'),
+    ],
+    ['yaml', join(distRoot, 'vendor/yaml/dist/index.js')],
+  ]);
+
+  for (const file of await listFiles(distRoot)) {
+    if (!file.endsWith('.js')) continue;
+    let source = await readFile(file, 'utf8');
+    let changed = false;
+    for (const [specifier, target] of rewrites) {
+      if (!source.includes(specifier)) continue;
+      const replacement = relative(dirname(file), target).replace(/\\/g, '/');
+      source = source
+        .replaceAll(`"${specifier}"`, `"${replacement}"`)
+        .replaceAll(`'${specifier}'`, `'${replacement}'`);
+      changed = true;
+    }
+    if (changed) {
+      await writeFile(file, source);
+    }
   }
 }
 

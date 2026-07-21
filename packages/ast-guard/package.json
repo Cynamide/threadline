@@ -15,8 +15,16 @@
   "dependencies": {
     "@babel/parser": "^7.26.3"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Cynamide/threadline",
+    "directory": "packages/ast-guard"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22.13.0"
   },
   "files": [
     "src",

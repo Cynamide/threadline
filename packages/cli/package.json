@@ -7,13 +7,15 @@
     "threadline": "./dist/index.js"
   },
   "dependencies": {
-    "@threadline/ast-guard": "workspace:*"
+    "@threadline/ast-guard": "workspace:*",
+    "yaml": "^2.9.0"
   },
   "exports": {
     ".": "./dist/index.js",
     "./commands/init": "./dist/commands/init.js",
     "./commands/validate": "./dist/commands/validate.js",
     "./commands/scan-handoffs": "./dist/commands/scan-handoffs.js",
+    "./commands/export-handoffs": "./dist/commands/export-handoffs.js",
     "./commands/install-hooks": "./dist/commands/install-hooks.js",
     "./detectors/framework": "./dist/detectors/framework.js",
     "./detectors/styling": "./dist/detectors/styling.js",
@@ -28,7 +30,7 @@
   "scripts": {
     "build": "node --disable-warning=ExperimentalWarning scripts/build.mjs",
     "pack:local": "node --disable-warning=ExperimentalWarning scripts/pack-local.mjs",
-    "test": "npm run build && node --test test/*.test.mjs",
+    "test": "npm run build && node --test --test-concurrency=1 test/*.test.mjs",
     "clean": "rm -rf dist"
   },
   "keywords": [
@@ -47,6 +49,6 @@
     "access": "public"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22.13.0"
   }
 }

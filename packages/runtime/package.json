@@ -4,16 +4,15 @@
   "description": "Threadline runtime for object-form handoffs with safe fallbacks.",
   "type": "module",
   "main": "./dist/index.js",
-  "types": "./src/index.ts",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./src/index.ts",
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     }
   },
   "files": [
     "dist",
-    "src",
     "SPEC.md",
     "CONTEXT.md"
   ],
@@ -37,6 +36,6 @@
     "access": "public"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22.13.0"
   }
 }

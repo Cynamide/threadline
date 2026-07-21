@@ -1,11 +1,12 @@
 import { join } from 'node:path';
+import { readFile } from 'node:fs/promises';
 import { createInterface } from 'node:readline';
 import { generateBoundariesMarkdown } from '../generators/boundaries.js';
 import { generateConfigYaml } from '../generators/config.js';
 import { generateDesignSystemMarkdown } from '../generators/design-system.js';
 import { generateSkillMarkdown } from '../generators/skill.js';
 
-import { writeTextFile } from '../utils/fs.js';
+import { exists, writeTextFile } from '../utils/fs.js';
 import {
   clarifyInitProposal,
   finalizeInitProposal,
@@ -18,24 +19,15 @@ import { installHooks,                         } from './install-hooks.js';
 export async function initProject(options             )                      {
   const proposal = await resolveInitProposal({
     cwd: options.cwd,
-    overrides: options.overrides,
   });
-  return await writeInitProject(options.cwd, proposal, {
-    preview: options.preview ?? false,
-    summarySuffix: formatAppliedOverrides(options.overrides),
-  });
+  return await writeInitProject(options.cwd, proposal);
 }
 
 async function writeInitProject(
   cwd        ,
   proposal              ,
-  options
-
-   ,
 )                      {
-  const summary = [formatResolvedInitSummary(proposal), options.summarySuffix]
-    .filter(Boolean)
-    .join('\n');
+  const summary = formatResolvedInitSummary(proposal);
   const { configInput, detected } = {
     ...finalizeInitProposal(proposal),
     detected: proposal.detected,
@@ -55,34 +47,23 @@ async function writeInitProject(
     ],
     ['.threadline/boundaries.md', generateBoundariesMarkdown()],
     ['.threadline/design-system.md', generateDesignSystemMarkdown(resolvedDesignSystem)],
-    ['.threadline/skill.md', generateSkillMarkdown()],
+    ['.codex/skills/threadline/SKILL.md', generateSkillMarkdown()],
+    ['.cursor/rules/threadline.mdc', generateCursorRuleMarkdown()],
   ]);
-
-  if (options.preview) {
-    return {
-      configPath: '.threadline/config.yaml',
-      filesWritten: [],
-      hook: { installed: false, hookPath: '.git/hooks/pre-push', updated: false },
-      preview: true,
-      summary: `${summary}\nPreview only: no files written.`,
-      detected: {
-        framework: detected.framework.framework,
-        styling: detected.styling.strategy,
-        designSystem: detected.designSystem.library,
-      },
-    };
-  }
 
   await Promise.all(
     [...files.entries()].map(([path, contents]) => writeTextFile(join(cwd, path), contents)),
   );
+  await Promise.all([
+    writeManagedAgentReference(join(cwd, 'AGENTS.md'), 'Codex'),
+    writeManagedAgentReference(join(cwd, 'CLAUDE.md'), 'Claude'),
+  ]);
 
   const hook = await installHooks({ cwd });
   return {
     configPath: '.threadline/config.yaml',
-    filesWritten: [...files.keys()],
+    filesWritten: [...files.keys(), 'AGENTS.md', 'CLAUDE.md'],
     hook,
-    preview: false,
     summary,
     detected: {
       framework: detected.framework.framework,
@@ -90,6 +71,42 @@ async function writeInitProject(
       designSystem: detected.designSystem.library,
     },
   };
+}
+
+function generateCursorRuleMarkdown()         {
+  return [
+    '---',
+    'description: Threadline repo workflow and validation guidance',
+    'alwaysApply: true',
+    '---',
+    '',
+    'Use the Threadline companion skill at `.codex/skills/threadline/SKILL.md` before changing UI handoffs, validation rules, or Threadline config.',
+    '',
+  ].join('\n');
+}
+
+async function writeManagedAgentReference(path        , agentName        )                {
+  const markerStart = '<!-- threadline managed block start -->';
+  const markerEnd = '<!-- threadline managed block end -->';
+  const block = [
+    markerStart,
+    `Threadline is installed in this repo. ${agentName} should read \`.codex/skills/threadline/SKILL.md\` before changing UI handoffs, validation rules, or Threadline config.`,
+    markerEnd,
+  ].join('\n');
+  const current = (await exists(path)) ? await readFile(path, 'utf8') : '';
+  const withoutBlock = stripManagedBlock(current, markerStart, markerEnd).trimEnd();
+  const next = withoutBlock ? `${withoutBlock}\n\n${block}\n` : `${block}\n`;
+  await writeTextFile(path, next);
+}
+
+function stripManagedBlock(current        , markerStart        , markerEnd        )         {
+  const start = current.indexOf(markerStart);
+  const end = current.indexOf(markerEnd);
+  if (start === -1 || end === -1 || end < start) {
+    return current;
+  }
+
+  return `${current.slice(0, start)}${current.slice(end + markerEnd.length)}`;
 }
 
 export async function runInteractiveInit(options                        )                             {
@@ -101,7 +118,6 @@ export async function runInteractiveInit(options                        )       
     while (true) {
       const proposal = await resolveInitProposal({
         cwd: options.cwd,
-        overrides: options.overrides,
       });
       output.write(`${formatInitSummary(proposal)}\n`);
       let clarified = proposal;
@@ -119,14 +135,13 @@ export async function runInteractiveInit(options                        )       
 
       const freshProposal = await resolveInitProposal({
         cwd: options.cwd,
-        overrides: options.overrides,
       });
       if (!sameConfigInput(clarified.resolved.configInput, freshProposal.resolved.configInput)) {
         output.write('\nThe repo changed while I was confirming. Let me re-check the setup.\n');
         continue;
       }
 
-      return await writeInitProject(options.cwd, clarified, { preview: false });
+      return await writeInitProject(options.cwd, clarified);
     }
   } finally {
     prompt.close();
@@ -134,10 +149,6 @@ export async function runInteractiveInit(options                        )       
 }
 
 export function formatInitResult(result            )         {
-  if (result.preview) {
-    return result.summary;
-  }
-
   let hook = 'skipped hook installation';
   if (result.hook.installed) {
     hook = 'installed pre-push hook';
@@ -148,23 +159,6 @@ export function formatInitResult(result            )         {
     `Detected ${result.detected.framework}, ${result.detected.styling}, ${result.detected.designSystem}.`,
     `Wrote ${result.filesWritten.join(', ')} and ${hook}.`,
   ].join('\n');
-}
-
-function formatAppliedOverrides(overrides                           )         {
-  if (!overrides) return '';
-
-  const order                             = [
-    'framework',
-    'styling',
-    'designSystem',
-    'srcPath',
-    'componentPath',
-    'devCommand',
-    'port',
-  ];
-  const applied = order.filter((key) => overrides[key] !== undefined);
-  if (applied.length === 0) return '';
-  return `Applied overrides: ${applied.join(', ')}.`;
 }
 
 function sameConfigInput(left                                                        , right                                                        )          {

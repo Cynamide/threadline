@@ -98,7 +98,7 @@ test('formatInitSummary shows an explicit ready-to-write proposal once uncertain
       '- dev command: npm run dev',
       '- port: 3000',
       'Config target: .threadline/config.yaml.',
-      'Will write: .threadline/config.yaml, .threadline/boundaries.md, .threadline/design-system.md, .threadline/skill.md.',
+      'Will write: .threadline/config.yaml, .threadline/boundaries.md, .threadline/design-system.md, .codex/skills/threadline/SKILL.md, AGENTS.md, CLAUDE.md, .cursor/rules/threadline.mdc.',
     ].join('\n'),
   );
 });

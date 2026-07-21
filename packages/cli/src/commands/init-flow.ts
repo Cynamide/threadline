@@ -8,7 +8,6 @@ import type {
   DetectedInitSettings,
   FinalizedInitProposal,
   Framework,
-  InitOverrides,
   InitProposal,
   InitProposalField,
   StylingStrategy,
@@ -19,7 +18,10 @@ const WRITTEN_FILES = [
   '.threadline/config.yaml',
   '.threadline/boundaries.md',
   '.threadline/design-system.md',
-  '.threadline/skill.md',
+  '.codex/skills/threadline/SKILL.md',
+  'AGENTS.md',
+  'CLAUDE.md',
+  '.cursor/rules/threadline.mdc',
 ] as const;
 const FIELD_ORDER: InitProposalField[] = [
   'framework',
@@ -44,10 +46,9 @@ const NEGATION_TOKENS = new Set(['no', 'not', 'never', 'without', 'avoid', 'dont
 
 export async function resolveInitProposal(options: {
   cwd: string;
-  overrides?: InitOverrides;
 }): Promise<InitProposal> {
   const detected = await detectAll(options.cwd);
-  return buildInitProposal(detected, overridesToUserAnswers(options.overrides));
+  return buildInitProposal(detected);
 }
 
 export function buildInitProposal(
@@ -120,22 +121,6 @@ function createProposal(
     },
     summaryLines,
   };
-}
-
-function overridesToUserAnswers(
-  overrides: InitOverrides | undefined,
-): Partial<Record<InitProposalField, string>> {
-  if (!overrides) return {};
-
-  const userAnswers: Partial<Record<InitProposalField, string>> = {};
-  if (overrides.framework !== undefined) userAnswers.framework = overrides.framework;
-  if (overrides.styling !== undefined) userAnswers.styling = overrides.styling;
-  if (overrides.designSystem !== undefined) userAnswers.designSystem = overrides.designSystem;
-  if (overrides.srcPath !== undefined) userAnswers.srcPath = overrides.srcPath;
-  if (overrides.componentPath !== undefined) userAnswers.componentPath = overrides.componentPath;
-  if (overrides.devCommand !== undefined) userAnswers.devCommand = overrides.devCommand;
-  if (overrides.port !== undefined) userAnswers.port = String(overrides.port);
-  return userAnswers;
 }
 
 function resolveConfigInput(

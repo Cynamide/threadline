@@ -34,7 +34,10 @@ function validateOptions<T>(options: unknown): asserts options is HandoffOptions
 }
 
 function isDevelopment(): boolean {
-  return process.env.NODE_ENV === DEVELOPMENT_ENV;
+  const runtimeGlobal = globalThis as typeof globalThis & {
+    process?: { env?: { NODE_ENV?: string } };
+  };
+  return runtimeGlobal.process?.env?.NODE_ENV === DEVELOPMENT_ENV;
 }
 
 function warnInvocation({ id, title, description }: HandoffOptions<unknown>): void {

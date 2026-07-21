@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { parse as parseYaml } from 'yaml';
 
 const TEMPLATE_PATH = new URL('./threadline-config.template.yaml', import.meta.url);
 let cachedTemplate                = null;
@@ -162,55 +163,56 @@ export async function loadThreadlineConfig(cwd        )                         
 }
 
 export function parseThreadlineConfig(text        )                   {
+  const data = parseYamlConfig(text);
   const project = {
-    framework: readEnum(text, 'project', 'framework', ['nextjs', 'vite', 'cra', 'remix', 'custom'], DEFAULT_CONFIG.project.framework, true),
-    src_path: readScalar(text, 'project', 'src_path', DEFAULT_CONFIG.project.src_path, true),
-    component_path: readScalar(text, 'project', 'component_path', DEFAULT_CONFIG.project.component_path, true),
-    extensions: readList(text, 'project', 'extensions', DEFAULT_CONFIG.project.extensions, true),
+    framework: readYamlEnum(data, 'project', 'framework', ['nextjs', 'vite', 'cra', 'remix', 'custom'], DEFAULT_CONFIG.project.framework, true),
+    src_path: readYamlScalar(data, 'project', 'src_path', DEFAULT_CONFIG.project.src_path, true),
+    component_path: readYamlScalar(data, 'project', 'component_path', DEFAULT_CONFIG.project.component_path, true),
+    extensions: readYamlList(data, 'project', 'extensions', DEFAULT_CONFIG.project.extensions, true),
   };
   const dev = {
-    run_command: readScalar(text, 'dev', 'run_command', DEFAULT_CONFIG.dev.run_command, true),
-    port: readNumber(text, 'dev', 'port', DEFAULT_CONFIG.dev.port, true),
-    startup_timeout: readNumber(text, 'dev', 'startup_timeout', DEFAULT_CONFIG.dev.startup_timeout, true),
+    run_command: readYamlScalar(data, 'dev', 'run_command', DEFAULT_CONFIG.dev.run_command, true),
+    port: readYamlNumber(data, 'dev', 'port', DEFAULT_CONFIG.dev.port, true),
+    startup_timeout: readYamlNumber(data, 'dev', 'startup_timeout', DEFAULT_CONFIG.dev.startup_timeout, true),
   };
   const styling = {
-    strategy: readEnum(text, 'styling', 'strategy', ['tailwind', 'styled-components', 'emotion', 'css-modules', 'plain-css'], 'plain-css', true),
-    enforce_scoping: readBoolean(text, 'styling', 'enforce_scoping', true, true),
-    tailwind_config: readScalar(text, 'styling', 'tailwind_config', '', true),
+    strategy: readYamlEnum(data, 'styling', 'strategy', ['tailwind', 'styled-components', 'emotion', 'css-modules', 'plain-css'], 'plain-css', true),
+    enforce_scoping: readYamlBoolean(data, 'styling', 'enforce_scoping', true, true),
+    tailwind_config: readYamlScalar(data, 'styling', 'tailwind_config', '', true),
   };
   const git = {
-    branch_prefix: readScalar(text, 'git', 'branch_prefix', 'design/', true),
-    commit_style: readEnum(text, 'git', 'commit_style', ['conventional', 'simple'], 'conventional', true),
-    squash_merge: readBoolean(text, 'git', 'squash_merge', true, true),
-    pr_title_format: readScalar(text, 'git', 'pr_title_format', 'ui: {description}', true),
+    branch_prefix: readYamlScalar(data, 'git', 'branch_prefix', 'design/', true),
+    commit_style: readYamlEnum(data, 'git', 'commit_style', ['conventional', 'simple'], 'conventional', true),
+    squash_merge: readYamlBoolean(data, 'git', 'squash_merge', true, true),
+    pr_title_format: readYamlScalar(data, 'git', 'pr_title_format', 'ui: {description}', true),
   };
   const handoff = {
-    create_issues: readBoolean(text, 'handoff', 'create_issues', true, true),
-    status_on_create: readScalar(text, 'handoff', 'status_on_create', 'Backlog', true),
-    status_on_merge: readScalar(text, 'handoff', 'status_on_merge', 'Ready', true),
-    default_assignee: readNullableScalar(text, 'handoff', 'default_assignee', true),
-    team_id: readNullableScalar(text, 'handoff', 'team_id', true),
+    create_issues: readYamlBoolean(data, 'handoff', 'create_issues', true, true),
+    status_on_create: readYamlScalar(data, 'handoff', 'status_on_create', 'Backlog', true),
+    status_on_merge: readYamlScalar(data, 'handoff', 'status_on_merge', 'Ready', true),
+    default_assignee: readYamlNullableScalar(data, 'handoff', 'default_assignee', true),
+    team_id: readYamlNullableScalar(data, 'handoff', 'team_id', true),
   };
   const boundaries = {
-    forbidden_imports: readList(text, 'boundaries', 'forbidden_imports', [], true),
-    forbidden_paths: readList(text, 'boundaries', 'forbidden_paths', [], true),
-    whitelisted_imports: readList(text, 'boundaries', 'whitelisted_imports', [], true),
-    whitelisted_components: readList(text, 'boundaries', 'whitelisted_components', [], true),
+    forbidden_imports: readYamlList(data, 'boundaries', 'forbidden_imports', [], true),
+    forbidden_paths: readYamlList(data, 'boundaries', 'forbidden_paths', [], true),
+    whitelisted_imports: readYamlList(data, 'boundaries', 'whitelisted_imports', [], true),
+    whitelisted_components: readYamlList(data, 'boundaries', 'whitelisted_components', [], true),
   };
   const validation = {
-    pre_push: readBoolean(text, 'validation', 'pre_push', true, true),
-    pre_commit: readBoolean(text, 'validation', 'pre_commit', false, true),
-    auto_fix: readBoolean(text, 'validation', 'auto_fix', true, true),
-    max_warnings: readNumber(text, 'validation', 'max_warnings', 0, true),
+    pre_push: readYamlBoolean(data, 'validation', 'pre_push', true, true),
+    pre_commit: readYamlBoolean(data, 'validation', 'pre_commit', false, true),
+    auto_fix: readYamlBoolean(data, 'validation', 'auto_fix', true, true),
+    max_warnings: readYamlNumber(data, 'validation', 'max_warnings', 0, true),
   };
   const design_system = {
-    library: readEnum(text, 'design_system', 'library', ['shadcn', 'mui', 'antd', 'radix', 'custom', 'none'], 'none', true),
-    import_path: readScalar(text, 'design_system', 'import_path', '', true),
-    allow_new_primitives: readBoolean(text, 'design_system', 'allow_new_primitives', false, true),
-    component_aliases: readMapping(text, 'design_system', 'component_aliases', true),
+    library: readYamlEnum(data, 'design_system', 'library', ['shadcn', 'mui', 'antd', 'radix', 'custom', 'none'], 'none', true),
+    import_path: readYamlScalar(data, 'design_system', 'import_path', '', true),
+    allow_new_primitives: readYamlBoolean(data, 'design_system', 'allow_new_primitives', false, true),
+    component_aliases: readYamlMapping(data, 'design_system', 'component_aliases', true),
   };
 
-  if (readTopLevelScalar(text, 'version', DEFAULT_CONFIG.version, true) !== '1.0') {
+  if (readYamlTopLevelScalar(data, 'version', DEFAULT_CONFIG.version, true) !== '1.0') {
     throw new Error('Invalid config: version must be "1.0".');
   }
   assertRelativePath(project.src_path, 'project.src_path');
@@ -310,6 +312,168 @@ function cloneConfig(config                  )                   {
         }
       : undefined,
   };
+}
+
+function parseYamlConfig(text        )                          {
+  const parsed = parseYaml(text);
+  if (!isRecord(parsed)) {
+    throw new Error('Invalid config: expected a YAML mapping.');
+  }
+  return parsed;
+}
+
+function readYamlScalar(
+  data                         ,
+  section        ,
+  key        ,
+  fallback        ,
+  required = false,
+)         {
+  const value = readYamlValue(data, section, key, required);
+  if (value === undefined) return fallback;
+  if (value === null) return '';
+  if (typeof value !== 'string') {
+    throw new Error(`Invalid config: ${section}.${key} must be a string.`);
+  }
+  return value;
+}
+
+function readYamlTopLevelScalar(
+  data                         ,
+  key        ,
+  fallback        ,
+  required = false,
+)         {
+  const value = data[key];
+  if (value === undefined) {
+    if (required) throw new Error(`Invalid config: missing ${key}.`);
+    return fallback;
+  }
+  if (value === null) return '';
+  if (typeof value !== 'string') {
+    throw new Error(`Invalid config: ${key} must be a string.`);
+  }
+  return value;
+}
+
+function readYamlList(
+  data                         ,
+  section        ,
+  key        ,
+  fallback          ,
+  required = false,
+)           {
+  const value = readYamlValue(data, section, key, required);
+  if (value === undefined) return fallback;
+  if (!Array.isArray(value)) {
+    throw new Error(`Invalid config: ${section}.${key} must be a list.`);
+  }
+  if (!value.every((item) => typeof item === 'string')) {
+    throw new Error(`Invalid config: ${section}.${key} must contain only strings.`);
+  }
+  return value;
+}
+
+function readYamlBoolean(
+  data                         ,
+  section        ,
+  key        ,
+  fallback         ,
+  required = false,
+)          {
+  const value = readYamlValue(data, section, key, required);
+  if (value === undefined) return fallback;
+  if (typeof value !== 'boolean') {
+    throw new Error(`Invalid config: ${section}.${key} must be true or false.`);
+  }
+  return value;
+}
+
+function readYamlNumber(
+  data                         ,
+  section        ,
+  key        ,
+  fallback        ,
+  required = false,
+)         {
+  const value = readYamlValue(data, section, key, required);
+  if (value === undefined) return fallback;
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    throw new Error(`Invalid config: ${section}.${key} must be a number.`);
+  }
+  return value;
+}
+
+function readYamlEnum                  (
+  data                         ,
+  section        ,
+  key        ,
+  allowed              ,
+  fallback   ,
+  required = false,
+)    {
+  const value = readYamlScalar(data, section, key, fallback, required);
+  if (!allowed.includes(value     )) {
+    throw new Error(`Invalid config: ${section}.${key} must be one of ${allowed.join(', ')}.`);
+  }
+  return value     ;
+}
+
+function readYamlNullableScalar(
+  data                         ,
+  section        ,
+  key        ,
+  required = false,
+)                {
+  const value = readYamlValue(data, section, key, required);
+  if (value === undefined || value === null) return null;
+  if (typeof value !== 'string') {
+    throw new Error(`Invalid config: ${section}.${key} must be a string or null.`);
+  }
+  return value;
+}
+
+function readYamlMapping(
+  data                         ,
+  section        ,
+  key        ,
+  required = false,
+)                         {
+  const value = readYamlValue(data, section, key, required);
+  if (value === undefined) return {};
+  if (!isRecord(value)) {
+    throw new Error(`Invalid config: ${section}.${key} must be a mapping.`);
+  }
+  const entries                         = {};
+  for (const [name, item] of Object.entries(value)) {
+    if (typeof item !== 'string') {
+      throw new Error(`Invalid config: ${section}.${key}.${name} must be a string.`);
+    }
+    entries[name] = item;
+  }
+  return entries;
+}
+
+function readYamlValue(
+  data                         ,
+  section        ,
+  key        ,
+  required         ,
+)          {
+  const sectionValue = data[section];
+  if (!isRecord(sectionValue)) {
+    if (required) throw new Error(`Invalid config: missing ${section}.${key}.`);
+    return undefined;
+  }
+  const value = sectionValue[key];
+  if (value === undefined && required) {
+    throw new Error(`Invalid config: missing ${section}.${key}.`);
+  }
+  return value;
+}
+
+function isRecord(value         )                                   {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function readScalar(text        , section        , key        , fallback        , required = false)         {

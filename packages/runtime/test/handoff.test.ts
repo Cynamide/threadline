@@ -4,10 +4,12 @@ import { afterEach, describe, it } from 'node:test';
 import { handoff } from '../src/index.ts';
 
 const originalNodeEnv = process.env.NODE_ENV;
+const originalProcess = globalThis.process;
 const originalWarn = console.warn;
 const originalError = console.error;
 
 afterEach(() => {
+  globalThis.process = originalProcess;
   process.env.NODE_ENV = originalNodeEnv;
   console.warn = originalWarn;
   console.error = originalError;
@@ -97,6 +99,26 @@ describe('handoff()', () => {
     assert.equal(wrapped(), 'ok');
     assert.equal(didRun, true);
     assert.deepEqual(warnings, []);
+  });
+
+  it('runs fallback in browser-like environments without process', () => {
+    let didRun = false;
+    console.warn = () => {
+      throw new Error('should not warn without development env');
+    };
+    (globalThis as typeof globalThis & { process?: NodeJS.Process }).process = undefined;
+
+    const wrapped = handoff({
+      id: 'browser-fallback',
+      title: 'Browser Fallback',
+      fallback: () => {
+        didRun = true;
+        return 'ok';
+      },
+    });
+
+    assert.equal(wrapped(), 'ok');
+    assert.equal(didRun, true);
   });
 
   it('logs fallback failures in development and does not rethrow them', () => {

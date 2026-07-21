@@ -17,11 +17,7 @@ Default path:
 3. show the resolved proposal for confirmation
 4. write files and install hooks
 
-Compatibility paths:
-
-- explicit init overrides keep `init` non-interactive
-- `--json` returns the resolved proposal/result without prompting
-- `--preview` resolves the proposal without writing files
+`init` requires interactive confirmation before it writes files. Preview and override flags are not part of the CLI setup contract.
 
 ### `threadline validate`
 
@@ -50,7 +46,10 @@ Writes or updates the local pre-push hook so validation runs before code leaves 
 - `.threadline/config.yaml`
 - `.threadline/boundaries.md`
 - `.threadline/design-system.md`
-- `.threadline/skill.md`
+- `.codex/skills/threadline/SKILL.md`
+- `AGENTS.md`
+- `CLAUDE.md`
+- `.cursor/rules/threadline.mdc`
 
 ## Config shape
 

@@ -23,22 +23,42 @@ const INVALID_CALLABLE_IDENTIFIERS = new Set([
 
 export function parseHandoffs(sourceCode, filePath) {
   const ast = parseSourceFile(sourceCode);
+  const handoffBindings = findThreadlineHandoffBindings(ast);
   const handoffs = [];
 
   walkAst(ast, (node) => {
-    if (!isHandoffCall(node)) return;
+    if (!isHandoffCall(node, handoffBindings)) return;
     handoffs.push(parseHandoffCall(sourceCode, filePath, node));
   });
 
   return handoffs.sort((left, right) => left.range[0] - right.range[0]);
 }
 
-function isHandoffCall(node) {
-  return (node.type === 'CallExpression' || node.type === 'OptionalCallExpression') && isHandoffCallee(node.callee);
+function findThreadlineHandoffBindings(ast) {
+  const bindings = new Set();
+  for (const statement of ast.program?.body ?? []) {
+    if (statement.type !== 'ImportDeclaration') continue;
+    if (statement.source?.value !== '@threadline/runtime') continue;
+    for (const specifier of statement.specifiers ?? []) {
+      if (
+        specifier.type === 'ImportSpecifier' &&
+        specifier.imported?.type === 'Identifier' &&
+        specifier.imported.name === CALLEE &&
+        specifier.local?.type === 'Identifier'
+      ) {
+        bindings.add(specifier.local.name);
+      }
+    }
+  }
+  return bindings;
 }
 
-function isHandoffCallee(callee) {
-  return callee?.type === 'Identifier' && callee.name === CALLEE;
+function isHandoffCall(node, handoffBindings) {
+  return (node.type === 'CallExpression' || node.type === 'OptionalCallExpression') && isHandoffCallee(node.callee, handoffBindings);
+}
+
+function isHandoffCallee(callee, handoffBindings) {
+  return callee?.type === 'Identifier' && handoffBindings.has(callee.name);
 }
 
 function parseHandoffCall(sourceCode, filePath, node) {

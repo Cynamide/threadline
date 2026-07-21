@@ -16,9 +16,16 @@ export function formatExportHandoffsResult(result                      )        
     return `No ${result.tracker} handoff payloads generated.\n`;
   }
 
-  const lines = [`Prepared ${result.payloads.length} ${result.tracker} handoff payload(s).`];
+  const lines = [
+    `Tracker: ${result.tracker}`,
+    `Handoffs found: ${result.payloads.length}`,
+    '',
+    'Prepared payloads:',
+  ];
   for (const payload of result.payloads) {
-    lines.push(`${payload.location} ${payload.title}`);
+    lines.push(`- ${payload.location} ${payload.title}`);
+    lines.push(`  ${payload.description}`);
+    lines.push(`  labels: ${payload.labels.join(', ')}; priority: ${payload.priority}; status: ${payload.status}`);
   }
   return `${lines.join('\n')}\n`;
 }

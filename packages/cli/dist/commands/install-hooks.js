@@ -2,9 +2,14 @@ import { chmod, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { exists, writeTextFile } from '../utils/fs.js';
 
-const hookBody = `#!/bin/sh
-# threadline pre-push hook
-threadline validate --staged
+const hookHeader = '#!/bin/sh';
+const managedBlockStart = '# threadline managed block start';
+const managedBlockEnd = '# threadline managed block end';
+const managedBlock = `${managedBlockStart}
+threadline validate
+${managedBlockEnd}`;
+const hookBody = `${hookHeader}
+${managedBlock}
 `;
 
 export async function installHooks(options                     )                              {
@@ -16,15 +21,44 @@ export async function installHooks(options                     )                
   let updated = true;
   if (await exists(hookPath)) {
     const current = await readFile(hookPath, 'utf8');
-    updated = current !== hookBody;
+    updated = normalizeHook(current) !== normalizeHook(mergeHook(current));
   }
 
   if (updated) {
-    await writeTextFile(hookPath, hookBody, 0o755);
+    const current = (await exists(hookPath)) ? await readFile(hookPath, 'utf8') : '';
+    await writeTextFile(hookPath, mergeHook(current), 0o755);
   }
   await chmod(hookPath, 0o755);
 
   return { installed: true, hookPath: '.git/hooks/pre-push', updated };
+}
+
+function mergeHook(current        )         {
+  const body = stripManagedBlock(current).trimEnd();
+  if (!body) {
+    return hookBody;
+  }
+
+  const withHeader = body.startsWith(hookHeader) ? body : `${hookHeader}\n${body}`;
+  return `${withHeader}\n\n${managedBlock}\n`;
+}
+
+function stripManagedBlock(current        )         {
+  if (current.trim() === '#!/bin/sh\n# threadline pre-push hook\nthreadline validate --staged') {
+    return '';
+  }
+
+  const start = current.indexOf(managedBlockStart);
+  const end = current.indexOf(managedBlockEnd);
+  if (start === -1 || end === -1 || end < start) {
+    return current;
+  }
+
+  return `${current.slice(0, start)}${current.slice(end + managedBlockEnd.length)}`;
+}
+
+function normalizeHook(value        )         {
+  return value.trim().replace(/\r\n/g, '\n');
 }
 
 export function formatInstallHooksResult(result                    )         {

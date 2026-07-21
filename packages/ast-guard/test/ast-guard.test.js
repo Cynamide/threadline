@@ -67,6 +67,7 @@ test('parseHandoffs extracts multiple object-form handoffs with stable locations
 test('parseHandoffs still finds object-form calls', () => {
   const handoffs = parseHandoffs(
     [
+      "import { handoff } from '@threadline/runtime';",
       'export function Toolbar() {',
       '  return handoff({',
       "    id: 'save-draft',",
@@ -94,7 +95,7 @@ test('parseHandoffs still finds object-form calls', () => {
       id: 'save-draft',
       title: 'Save Draft',
       fallbackCallable: true,
-      line: 2,
+      line: 3,
       column: 10,
       filePath: 'src/components/Toolbar.tsx',
     },
@@ -104,6 +105,7 @@ test('parseHandoffs still finds object-form calls', () => {
 test('parseHandoffs treats bare identifiers as callable fallbacks', () => {
   const [handoff] = parseHandoffs(
     [
+      "import { handoff } from '@threadline/runtime';",
       'handoff({',
       "  id: 'export-data',",
       "  title: 'Export Data',",
@@ -119,6 +121,7 @@ test('parseHandoffs treats bare identifiers as callable fallbacks', () => {
 test('parseHandoffs accepts generic handoff calls', () => {
   const [handoff] = parseHandoffs(
     [
+      "import { handoff } from '@threadline/runtime';",
       'handoff<string>({',
       "  id: 'typed-handoff',",
       "  title: 'Typed Handoff',",
@@ -133,8 +136,24 @@ test('parseHandoffs accepts generic handoff calls', () => {
   assert.equal(handoff.fallback.callable, true);
 });
 
+test('parseHandoffs only extracts calls imported from Threadline runtime', () => {
+  const handoffs = parseHandoffs(
+    [
+      "import { handoff as threadlineHandoff } from '@threadline/runtime';",
+      'function handoff() { return null; }',
+      "handoff({ id: 'local', title: 'Local', fallback: () => null });",
+      "threadlineHandoff({ id: 'runtime', title: 'Runtime', fallback: () => null });",
+    ].join('\n'),
+    'src/components/Aliased.tsx',
+  );
+
+  assert.equal(handoffs.length, 1);
+  assert.equal(handoffs[0].id, 'runtime');
+});
+
 test('parseHandoffs keeps working for generic handoff calls and nested expressions', () => {
   const source = [
+    "import { handoff } from '@threadline/runtime';",
     'const wrapped = handoff<string>({',
     "  id: 'typed-handoff',",
     "  title: 'Typed Handoff',",
@@ -152,6 +171,7 @@ test('parseHandoffs keeps working for generic handoff calls and nested expressio
 test('validateHandoffSyntax reports documented handoff codes and description error', () => {
   const [handoff] = parseHandoffs(
     [
+      "import { handoff } from '@threadline/runtime';",
       'handoff({',
       "  id: 'ExportData',",
       "  description: '',",
@@ -165,10 +185,10 @@ test('validateHandoffSyntax reports documented handoff codes and description err
   assert.deepEqual(
     violations.map(({ code, severity, line, column }) => ({ code, severity, line, column })),
     [
-      { code: 'HANDOFF002', severity: 'error', line: 2, column: 7 },
-      { code: 'HANDOFF003', severity: 'error', line: 1, column: 1 },
-      { code: 'HANDOFF004', severity: 'error', line: 3, column: 16 },
-      { code: 'HANDOFF005', severity: 'error', line: 1, column: 1 },
+      { code: 'HANDOFF002', severity: 'error', line: 3, column: 7 },
+      { code: 'HANDOFF003', severity: 'error', line: 2, column: 1 },
+      { code: 'HANDOFF004', severity: 'error', line: 4, column: 16 },
+      { code: 'HANDOFF005', severity: 'error', line: 2, column: 1 },
     ],
   );
 });
@@ -176,6 +196,7 @@ test('validateHandoffSyntax reports documented handoff codes and description err
 test('validateHandoffSyntax rejects non-callable fallback expressions', () => {
   const handoffs = parseHandoffs(
     [
+      "import { handoff } from '@threadline/runtime';",
       'handoff({',
       "  id: 'false-fallback',",
       "  title: 'False Fallback',",
@@ -211,6 +232,7 @@ test('validateHandoffSyntax rejects non-callable fallback expressions', () => {
 
 test('validateStateBoundaries detects UI state violations including unsafe fallback bodies', () => {
   const source = [
+    "import { handoff } from '@threadline/runtime';",
     'export function ProfileCard() {',
     '  const user = useSelector((state) => state.user);',
     '  const open = () => useNavigate()("/settings");',
@@ -231,9 +253,9 @@ test('validateStateBoundaries detects UI state violations including unsafe fallb
   assert.deepEqual(
     violations.map(({ code, line, column }) => ({ code, line, column })),
     [
-      { code: 'STATE005', line: 2, column: 16 },
-      { code: 'STATE007', line: 3, column: 22 },
-      { code: 'STATE001', line: 8, column: 21 },
+      { code: 'STATE005', line: 3, column: 16 },
+      { code: 'STATE007', line: 4, column: 22 },
+      { code: 'STATE001', line: 9, column: 21 },
     ],
   );
 });
@@ -428,6 +450,7 @@ test('validateStylingScope ignores plain JavaScript className variables', () => 
 
 test('runValidation returns stable summary and forbidden path violations', () => {
   const source = [
+    "import { handoff } from '@threadline/runtime';",
     'export function ExportButton() {',
     '  return handoff({',
     "    id: 'export-data',",

@@ -8,7 +8,10 @@ const WRITTEN_FILES = [
   '.threadline/config.yaml',
   '.threadline/boundaries.md',
   '.threadline/design-system.md',
-  '.threadline/skill.md',
+  '.codex/skills/threadline/SKILL.md',
+  'AGENTS.md',
+  'CLAUDE.md',
+  '.cursor/rules/threadline.mdc',
 ]         ;
 const FIELD_ORDER                      = [
   'framework',
@@ -35,7 +38,7 @@ export async function resolveInitProposal(options
 
  )                        {
   const detected = await detectAll(options.cwd);
-  return buildInitProposal(detected, overridesToUserAnswers(options.overrides));
+  return buildInitProposal(detected);
 }
 
 export function buildInitProposal(
@@ -108,22 +111,6 @@ function createProposal(
     },
     summaryLines,
   };
-}
-
-function overridesToUserAnswers(
-  overrides                           ,
-)                                             {
-  if (!overrides) return {};
-
-  const userAnswers                                             = {};
-  if (overrides.framework !== undefined) userAnswers.framework = overrides.framework;
-  if (overrides.styling !== undefined) userAnswers.styling = overrides.styling;
-  if (overrides.designSystem !== undefined) userAnswers.designSystem = overrides.designSystem;
-  if (overrides.srcPath !== undefined) userAnswers.srcPath = overrides.srcPath;
-  if (overrides.componentPath !== undefined) userAnswers.componentPath = overrides.componentPath;
-  if (overrides.devCommand !== undefined) userAnswers.devCommand = overrides.devCommand;
-  if (overrides.port !== undefined) userAnswers.port = String(overrides.port);
-  return userAnswers;
 }
 
 function resolveConfigInput(

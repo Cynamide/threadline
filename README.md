@@ -42,7 +42,7 @@ That means a developer or agent can ship the safe path immediately, while the de
 
 1. Run `threadline init` in a repo.
 2. Threadline detects the repo shape and asks only for any unresolved settings.
-3. Threadline shows the resolved proposal for confirmation, then writes local config and guidance files.
+3. Threadline shows the resolved proposal for confirmation, then writes local config and agent guidance files.
 4. Use `handoff({ ... })` in UI code when a task needs a later implementation pass.
 5. Give the handoff a safe `fallback` so the app still works.
 6. Run `threadline validate` locally or `threadline validate --staged` before committing to catch boundary issues before they leave the machine.
@@ -56,9 +56,9 @@ The default `threadline init` experience is:
 1. Detect repo conventions.
 2. Clarify only the fields that are still uncertain.
 3. Confirm the resolved proposal that will be written.
-4. Write `.threadline/` files and install the hook.
+4. Write `.threadline/`, `.codex/skills/threadline/SKILL.md`, repo agent entrypoints, and install the hook.
 
-Scripted compatibility paths still exist. If you pass explicit init flags, `--json`, or `--preview`, the CLI stays non-interactive and returns or writes the resolved proposal directly.
+`init` is intentionally interactive. It does not expose preview or override flags as the normal setup path because Threadline is meant to inspect the repo, clarify uncertainty, and confirm before changing files.
 
 ## Code examples
 

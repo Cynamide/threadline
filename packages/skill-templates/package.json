@@ -16,7 +16,16 @@
   "scripts": {
     "test": "node --test"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Cynamide/threadline",
+    "directory": "packages/skill-templates"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22.13.0"
   }
 }
